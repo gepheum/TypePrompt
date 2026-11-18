@@ -222,3 +222,8 @@ span.lang {
 .vp-code .tp-punctuation {
   color: var(--shiki-token-punctuation);
 }
+
+/* Homepage ends with a closing call to action; trim the default gap above the footer. */
+.VPHome {
+  margin-bottom: 48px !important;
+}

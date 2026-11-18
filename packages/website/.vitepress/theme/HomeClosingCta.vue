@@ -24,8 +24,8 @@ import QuickstartPill from './QuickstartPill.vue'
 
 <style scoped>
 .closing-cta {
-  margin-top: 5rem;
-  padding: 3.5rem 1.5rem 1rem;
+  margin-top: 2rem;
+  padding: 3rem 1.5rem 0;
   border-top: 1px solid var(--vp-c-divider);
   text-align: center;
 }
@@ -52,6 +52,31 @@ import QuickstartPill from './QuickstartPill.vue'
   justify-content: center;
   gap: 12px;
   margin-top: 1.75rem;
+}
+
+/* On narrow screens, stack the button and pill at the same width. */
+@media (max-width: 639px) {
+  .closing-cta {
+    margin-top: 1rem;
+    padding-top: 2.5rem;
+  }
+
+  .closing-title {
+    font-size: 24px;
+    line-height: 32px;
+  }
+
+  .closing-actions {
+    flex-direction: column;
+    align-items: stretch;
+    max-width: 260px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .closing-actions > * {
+    justify-content: center;
+  }
 }
 
 /* Inside page content (.vp-doc), links are underlined by default. */
