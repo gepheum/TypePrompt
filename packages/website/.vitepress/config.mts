@@ -117,7 +117,7 @@ const docsSidebar = [
     ],
   },
   {
-    text: "Languages",
+    text: "Language guides",
     collapsed: true,
     items: languageItems,
   },
