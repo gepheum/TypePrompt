@@ -46,23 +46,23 @@ A `<template>` defines a prompt that can be built and sent to an LLM.
 
 **Attributes:**
 
-| Attribute | Required | Format | Description |
+| Attribute | Requirement | Format | Description |
 |---|---|---|---|
-| `name` | Yes | `PascalCase` | Unique name within the namespace |
-| `namespace` | No | `PascalCase` | Namespace this template belongs to; defaults to `Main` |
+| `name` | Required | `PascalCase` | Unique name within the namespace |
+| `namespace` | Optional | `PascalCase` | Namespace this template belongs to; defaults to `Main` |
 
 **Child elements** (in any order):
 
-| Element | Required | Description |
+| Element | Requirement | Description |
 |---|---|---|
 | `<meta>` | If top-level `<meta>` exists | Per-template metadata values |
-| `<schema>` | Yes | `Input` and `Output` types |
-| `<tools>` | No | Tools the model may call |
-| `<system>` | Yes | System instructions |
-| `<user>` | Yes | User message |
-| `<examples>` | No | Few-shot examples |
-| `<snippet>` | No | Reusable text fragments |
-| `<variant>` | No | Prompt variants |
+| `<schema>` | Required | `Input` and `Output` types |
+| `<tools>` | Optional | Tools the model may call |
+| `<system>` | Required | System instructions |
+| `<user>` | Required | User message |
+| `<examples>` | Optional | Few-shot examples |
+| `<snippet>` | Optional | Reusable text fragments |
+| `<variant>` | Optional | Prompt variants |
 
 ---
 
@@ -486,17 +486,17 @@ Defines a tool that the model can call during prompt execution. Tools have a des
 
 **Attributes:**
 
-| Attribute | Required | Format | Description |
+| Attribute | Requirement | Format | Description |
 |---|---|---|---|
-| `name` | Yes | `camelCase` | Unique name within the namespace |
-| `namespace` | No | `PascalCase` | Namespace this tool belongs to; defaults to `Main` |
+| `name` | Required | `camelCase` | Unique name within the namespace |
+| `namespace` | Optional | `PascalCase` | Namespace this tool belongs to; defaults to `Main` |
 
 **Child elements:**
 
-| Element | Required | Description |
+| Element | Requirement | Description |
 |---|---|---|
-| `<description>` | Yes | Human/model-readable description of what the tool does |
-| `<schema>` | Yes | `Input` and `Output` types; `Input` must be an `interface` |
+| `<description>` | Required | Human/model-readable description of what the tool does |
+| `<schema>` | Required | `Input` and `Output` types; `Input` must be an `interface` |
 
 ```xml
 <!-- getWeather.tp -->
@@ -566,9 +566,9 @@ Types declared inside `<namespace>` can be referenced from template and tool sch
 
 **Attributes:**
 
-| Attribute | Required | Format | Description |
+| Attribute | Requirement | Format | Description |
 |---|---|---|---|
-| `name` | Yes | `PascalCase` | Unique identifier for this namespace |
+| `name` | Required | `PascalCase` | Unique identifier for this namespace |
 
 If you don't declare any namespaces, all templates and tools belong to the implicit `Main` namespace. You can still define shared types for that default namespace by declaring `<namespace name="Main">` — any types defined there will be available via `shared.TypeName` in all `Main` templates and tools.
 
@@ -582,48 +582,48 @@ Inside `<playground>`, model configuration is defined in a `<model>` element, an
 
 **Attributes:**
 
-| Attribute | Required | Format | Description |
+| Attribute | Requirement | Format | Description |
 |---|---|---|---|
-| `for` | Yes | `PascalCase` | Name of the template this playground targets |
-| `namespace` | No | `PascalCase` | Namespace of the target template; defaults to `Main` |
+| `for` | Required | `PascalCase` | Name of the template this playground targets |
+| `namespace` | Optional | `PascalCase` | Namespace of the target template; defaults to `Main` |
 
 ### Model configuration
 
 The `<model>` element contains YAML configuration representing model options:
 
-| Field | Required | Type | Description |
+| Field | Requirement | Type | Description |
 |---|---|---|---|
-| `model` | Yes | `string` | Model identifier (e.g. `openai/gpt-4o`, `anthropic/claude-sonnet-4.5`) |
-| `temperature` | No | `number` | Sampling temperature |
-| `maxTokens` / `maxOutputTokens` | No | `number` | Maximum tokens to generate |
-| `topP` | No | `number` | Nucleus sampling probability threshold |
-| `topK` | No | `number` | Top-k sampling threshold |
-| `presencePenalty` | No | `number` | Presence penalty |
-| `frequencyPenalty` | No | `number` | Frequency penalty |
-| `stopSequences` | No | `string[]` | Stop sequences |
-| `seed` | No | `number` | Random seed |
-| `reasoning` | No | `string` | Reasoning effort (`provider-default`, `none`, `minimal`, `low`, `medium`, `high`, `xhigh`) |
-| `providerOptions` | No | `object` | Provider-specific options for `openai`, `anthropic`, `google`, `xai`, `mistral` |
+| `model` | Required | `string` | Model identifier (e.g. `openai/gpt-4o`, `anthropic/claude-sonnet-4.5`) |
+| `temperature` | Optional | `number` | Sampling temperature |
+| `maxTokens` / `maxOutputTokens` | Optional | `number` | Maximum tokens to generate |
+| `topP` | Optional | `number` | Nucleus sampling probability threshold |
+| `topK` | Optional | `number` | Top-k sampling threshold |
+| `presencePenalty` | Optional | `number` | Presence penalty |
+| `frequencyPenalty` | Optional | `number` | Frequency penalty |
+| `stopSequences` | Optional | `string[]` | Stop sequences |
+| `seed` | Optional | `number` | Random seed |
+| `reasoning` | Optional | `string` | Reasoning effort (`provider-default`, `none`, `minimal`, `low`, `medium`, `high`, `xhigh`) |
+| `providerOptions` | Optional | `object` | Provider-specific options for `openai`, `anthropic`, `google`, `xai`, `mistral` |
 
 ### Sample structure
 
 Each sample in the `<samples>` YAML array has the following structure:
 
-| Field | Required | Type | Description |
+| Field | Requirement | Type | Description |
 |---|---|---|---|
-| `name` | No | `string` | Optional label or description for the sample |
-| `note` | No | `string` | Optional note or commentary about the sample |
-| `history` | No | `HistoryEntry[]` | Previous completed turns in multi-turn conversations |
-| `input` | Yes | `Input` | Current turn inputs matching the target template's `Input` schema |
-| `steps` | No | `Step[]` | Tool calls made during the current turn |
+| `name` | Optional | `string` | Optional label or description for the sample |
+| `note` | Optional | `string` | Optional note or commentary about the sample |
+| `history` | Optional | `HistoryEntry[]` | Previous completed turns in multi-turn conversations |
+| `input` | Required | `Input` | Current turn inputs matching the target template's `Input` schema |
+| `steps` | Optional | `Step[]` | Tool calls made during the current turn |
 
 When `history` is specified, each entry represents a completed prior turn:
 
-| Field | Required | Type | Description |
+| Field | Requirement | Type | Description |
 |---|---|---|---|
-| `input` | Yes | `Input` | Inputs for that historical turn |
-| `steps` | No | `Step[]` | Tool calls made during that turn |
-| `output` | Yes | `Output` | Model response for that turn matching the target template's `Output` schema |
+| `input` | Required | `Input` | Inputs for that historical turn |
+| `steps` | Optional | `Step[]` | Tool calls made during that turn |
+| `output` | Required | `Output` | Model response for that turn matching the target template's `Output` schema |
 
 Each step in `steps` contains a `toolCalls` list with the following structure:
 
