@@ -97,6 +97,7 @@ const docsSidebar = [
     items: [
       { text: "Introduction", link: "/guide/" },
       { text: "Quick start", link: "/quick-start" },
+      { text: "Examples", link: "/examples" },
       { text: "Project structure", link: "/project-structure" },
     ],
   },
@@ -114,6 +115,11 @@ const docsSidebar = [
       { text: "Playground inference", link: "/playground" },
       { text: "Template overrides", link: "/template-overrides" },
     ],
+  },
+  {
+    text: "Languages",
+    collapsed: true,
+    items: languageItems,
   },
 ];
 
@@ -159,22 +165,8 @@ export default defineConfig({
       { text: "Examples", link: "/examples", activeMatch: "^/examples" },
     ],
 
-    sidebar: {
-      "/guide/": docsSidebar,
-      "/reference": docsSidebar,
-      "/schema": docsSidebar,
-      "/template-overrides": docsSidebar,
-      "/playground": docsSidebar,
-      "/quick-start": docsSidebar,
-      "/project-structure": docsSidebar,
-      "/cli": docsSidebar,
-      "/languages/": [
-        {
-          text: "Supported languages",
-          items: languageItems,
-        },
-      ],
-    },
+    // A single sidebar for all docs pages (the home page layout has none).
+    sidebar: docsSidebar,
 
     outline: {
       level: [2, 3],
