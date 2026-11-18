@@ -654,7 +654,7 @@ Console.WriteLine(result.HumanAction);
 
 If the schema and the template drift apart, this fails to compile — not at runtime, in production, after the model replies.
 
-[Read the documentation →](/guide/#getting-started)
+[Read the documentation →](/quick-start)
 
 ## Test your templates where you write them
 

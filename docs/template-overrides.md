@@ -3,7 +3,7 @@ title: Template overrides
 description: Rapid prompt iteration and tuning using template overrides.
 ---
 
-# Iterating on prompts using template overrides
+# Template overrides
 
 When developing AI-powered features, you frequently need to experiment with and refine prompts: tweaking system instructions, testing different few-shot examples, adjusting temperatures, or trying different formatting styles.
 
@@ -190,6 +190,8 @@ Benefits of this workflow:
 - **Zero application downtime**: No service rebuilds, container restarts, or process restarts.
 - **Safe exploration**: The agent works in a temporary scratch directory. Your main git branch and application files are untouched.
 - **Guaranteed contract compatibility**: Because TypePrompt verifies schema equivalence, the agent cannot break downstream JSON parsing or type deserialization.
+
+For a lighter loop that calls the model directly, without your application, agents can run playground files instead. See [use with coding agents](/playground#use-with-coding-agents).
 
 ---
 

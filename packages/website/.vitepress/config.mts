@@ -96,19 +96,22 @@ const docsSidebar = [
     text: "Getting started",
     items: [
       { text: "Introduction", link: "/guide/" },
-      { text: "Playground inference", link: "/playground" },
+      { text: "Quick start", link: "/quick-start" },
+      { text: "Project structure", link: "/project-structure" },
     ],
   },
   {
-    text: "Language specification",
+    text: "Reference",
     items: [
       { text: "Template syntax", link: "/reference" },
       { text: "Schema language", link: "/schema" },
+      { text: "CLI and configuration", link: "/cli" },
     ],
   },
   {
-    text: "Advanced topics",
+    text: "Prompt iteration",
     items: [
+      { text: "Playground inference", link: "/playground" },
       { text: "Template overrides", link: "/template-overrides" },
     ],
   },
@@ -150,7 +153,7 @@ export default defineConfig({
       {
         text: "Docs",
         link: "/guide/",
-        activeMatch: "^/(guide|reference|schema|template-overrides|playground)",
+        activeMatch: "^/(guide|quick-start|project-structure|playground|template-overrides|reference|schema|cli)",
       },
       { text: "Languages", items: languageItems, activeMatch: "^/languages/" },
       { text: "Examples", link: "/examples", activeMatch: "^/examples" },
@@ -162,6 +165,9 @@ export default defineConfig({
       "/schema": docsSidebar,
       "/template-overrides": docsSidebar,
       "/playground": docsSidebar,
+      "/quick-start": docsSidebar,
+      "/project-structure": docsSidebar,
+      "/cli": docsSidebar,
       "/languages/": [
         {
           text: "Supported languages",

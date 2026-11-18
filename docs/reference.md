@@ -1,9 +1,9 @@
 ---
-title: Language Reference
+title: Template syntax
 description: XML syntax for defining prompt templates, tools, and metadata.
 ---
 
-# TypePrompt language reference
+# Template syntax
 
 TypePrompt projects are made up of `.tp` files matching the `include` pattern in `typeprompt.yaml` (usually: `prompts/**/*.tp`). Every file has one of the following root elements:
 
@@ -15,7 +15,7 @@ TypePrompt projects are made up of `.tp` files matching the `include` pattern in
 | [`<namespace>`](#the-namespace-element) | Group templates and tools; define shared types |
 | [`<playground>`](#the-playground-element) | Define playground samples for a template |
 
-For the type system (schemas, SDL), see the [schema language guide](/schema).
+For the type system (schemas, SDL), see [schema language](/schema). For file naming and project layout, see [project structure](/project-structure).
 
 ---
 
@@ -711,50 +711,3 @@ For multi-turn conversations or templates that use tools:
   </samples>
 </playground>
 ```
-
----
-
-## File naming conventions
-
-By convention, `.tp` files and directories within your prompts directory follow these rules:
-
-| Element | Naming Convention | Single-Namespace Project | Multi-Namespace Project |
-|---|---|---|---|
-| `<template>` | `PascalCase.tp` | `prompts/MyTemplate.tp` | `prompts/MyNamespace/MyTemplate.tp` |
-| `<tool>` | `lowerCamel.tp` | `prompts/myTool.tp` | `prompts/MyNamespace/myTool.tp` |
-| `<meta>` | `meta.tp` | `prompts/meta.tp` | `prompts/meta.tp` |
-| `<namespace>` | `shared.tp` | `prompts/shared.tp` | `prompts/MyNamespace/shared.tp` |
-| `<playground>` | `TemplateName.play.tp` | `prompts/MyTemplate.play.tp` | `prompts/MyNamespace/MyTemplate.play.tp` |
-
-### Single-namespace project layout
-
-```
-.
-├── typeprompt.yaml
-└── prompts/
-    ├── meta.tp
-    ├── shared.tp
-    ├── Translate.tp
-    ├── Translate.play.tp
-    ├── TriageTicket.tp
-    └── webSearch.tp
-```
-
-### Multi-namespace project layout
-
-```
-.
-├── typeprompt.yaml
-└── prompts/
-    ├── meta.tp
-    ├── Finance/
-    │   ├── shared.tp
-    │   ├── DetectAnomaly.tp
-    │   └── SummarizeTransaction.tp
-    └── Legal/
-        ├── shared.tp
-        ├── DraftNda.tp
-        ├── DraftNda.play.tp
-        └── SummarizeClause.tp
-```
-

@@ -24,7 +24,7 @@ function copy() {
         size="medium"
         theme="brand"
         text="Get started"
-        href="/guide/#getting-started"
+        href="/quick-start"
       />
     </div>
 

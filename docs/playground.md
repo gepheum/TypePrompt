@@ -109,6 +109,8 @@ After changing a prompt template in `prompts/`, run its playground with
 `result`. Add samples to the playground file to cover new cases.
 ```
 
+To have an agent test prompt changes against your running application, with real dependencies and tool integrations, see [automating prompt refinement with coding agents](/template-overrides#automating-prompt-refinement-with-coding-agents).
+
 ---
 
 ## API keys

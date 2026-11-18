@@ -1,9 +1,9 @@
 ---
-title: Schema Language
+title: Schema language
 description: TypeScript subset for defining Input, Output, and tool types.
 ---
 
-# TypePrompt schema definition language
+# Schema language
 
 TypePrompt uses a schema definition language (SDL) to describe the inputs and outputs of prompts and tools. The syntax is a subset of TypeScript with one addition: the `integer` primitive type.
 
