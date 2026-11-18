@@ -2,7 +2,7 @@
   <figure class="tilly-wrapper">
     <img src="/tilly.svg" alt="Tilly" class="tilly-image" />
     <figcaption class="tilly-legend">
-      Tilly is on a mission to stop prompts from living in f-strings. He doesn't care what anyone thinks. He will not rest until it's done.
+      Tilly is on a mission to stop prompts from living in <span class="nowrap">f-strings</span>. He doesn't care what anyone thinks. He will not rest until it's done.
     </figcaption>
   </figure>
 </template>
@@ -47,5 +47,9 @@
   color: var(--vp-c-text-2);
   text-align: center;
   font-style: italic;
+}
+
+.nowrap {
+  white-space: nowrap;
 }
 </style>
