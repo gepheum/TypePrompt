@@ -42,11 +42,28 @@
   max-width: 640px;
 }
 
-/* Ensure comfortable clearance between Tilly's legend and the hero text on smaller screens */
+/* On narrow screens, show the hero text and buttons first, and Tilly below them. */
 @media (max-width: 959px) {
-  .VPHero .image {
-    margin-bottom: 2rem !important;
+  .VPHero .main {
+    order: 1;
   }
+
+  .VPHero .image {
+    order: 2;
+    margin: 1.5rem 0 0 !important;
+  }
+}
+
+/* Avoid single words alone on the last line. */
+.VPHero .text,
+.VPHero .tagline {
+  text-wrap: balance;
+}
+
+.VPFeature .details,
+.vp-doc p,
+.vp-doc li {
+  text-wrap: pretty;
 }
 
 /* Slightly rounder code blocks to match the rounded feature cards. */
