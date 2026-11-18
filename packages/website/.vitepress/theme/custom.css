@@ -42,6 +42,17 @@
   max-width: 640px;
 }
 
+/*
+ * On desktop, VitePress shifts the hero image up and left by 32px, which makes
+ * Tilly sit higher than the text. Keep the horizontal shift only, so Tilly is
+ * vertically centered against the hero text.
+ */
+@media (min-width: 960px) {
+  .VPHero .image-container {
+    transform: translate(-32px, 0) !important;
+  }
+}
+
 /* On narrow screens, show the hero text and buttons first, and Tilly below them. */
 @media (max-width: 959px) {
   .VPHero .main {
