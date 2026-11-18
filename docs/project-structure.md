@@ -53,4 +53,4 @@ See [template syntax](/reference) for each element.
         └── SummarizeClause.tp
 ```
 
-See [the `<namespace>` element](/reference#the-namespace-element) for how namespaces group templates and share types.
+See the [`<namespace>`](/reference#the-namespace-element) element reference for how namespaces group templates and share types.

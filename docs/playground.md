@@ -39,7 +39,7 @@ Samples are validated against the template's `Input` schema at compile time, so 
 
 Samples can also include `history` (prior turns) and `steps` (tool calls made during the current turn) to test multi-turn conversations and tool use. Tools are never executed during inference: when the model requests a tool call, the call itself is the result. To test how the model continues, add the call and its output to the sample's `steps`.
 
-See [the `<playground>` element](/reference#the-playground-element) for the full file structure.
+See the [`<playground>`](/reference#the-playground-element) element reference for the full file structure.
 
 ### Why `<model>` is separate from `<meta>`
 
