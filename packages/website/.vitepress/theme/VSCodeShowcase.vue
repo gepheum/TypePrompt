@@ -3,15 +3,20 @@
 
 <template>
   <div class="vscode-showcase">
-    <div class="vscode-image-wrapper">
-      <img
-        src="/vscode-demo.png"
-        alt="TypePrompt interactive prompt playground in Visual Studio Code"
-        class="vscode-image"
-        loading="lazy"
-        width="2962"
-        height="1780"
-      />
+    <div class="vscode-video-wrapper">
+      <video
+        autoplay
+        loop
+        muted
+        playsinline
+        preload="auto"
+        class="vscode-video"
+        width="2640"
+        height="1600"
+      >
+        <source src="/vscode-demo.webm" type="video/webm" />
+        <source src="/vscode-demo.mp4" type="video/mp4" />
+      </video>
     </div>
 
     <!-- Footer / Install Link -->
@@ -48,16 +53,17 @@
   margin: 1.5rem 0 3rem;
 }
 
-.vscode-image-wrapper {
+.vscode-video-wrapper {
   display: flex;
   justify-content: center;
 }
 
-.vscode-image {
+.vscode-video {
   display: block;
   width: 100%;
   max-width: 100%;
   height: auto;
+  border-radius: 10px;
 }
 
 /* Footer / Marketplace Button */
