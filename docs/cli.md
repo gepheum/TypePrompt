@@ -12,7 +12,7 @@ description: TypePrompt CLI commands and typeprompt.yaml options.
 | [`init`](#init) | Initialize a TypePrompt project |
 | [`gen`](#gen) | Generate code from template files |
 | [`format`](#format) | Format template files |
-| [`run`](#run) | Run playground inferences for a `.play.tp` file |
+| [`run`](#run) | Run playground inference for a `.play.tp` file |
 | [`patch`](#patch) | Initialize a patch project against a base project |
 
 Commands that operate on a project use the current directory by default. Pass `-p <path>` to point to the directory containing `typeprompt.yaml` instead.

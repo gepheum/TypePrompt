@@ -102,7 +102,7 @@ Commands:
   gen          Generate code from template files to target languages
   format       Format all template files
   patch        Initialize a patch project against a base project
-  run <file>   Run playground inferences for a .play.tp file
+  run <file>   Run playground inference for a .play.tp file
   help         Display this help message
 
 Options:
