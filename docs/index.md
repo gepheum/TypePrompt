@@ -22,7 +22,7 @@ features:
     title: End-to-end type safety
     details: Enforces compile-time type safety across every stage of the LLM lifecycle — resolving template placeholders, parsing model responses, and dispatching tool calls.
   - icon: 🔷
-    title: TypeScript-based SDL
+    title: TypeScript-based schemas
     details: Define schemas with familiar TypeScript syntax. TypePrompt translates them into native types across 8 languages, and generates standard JSON Schemas for all major LLM providers.
   - icon: ✅
     title: Validated few-shot examples

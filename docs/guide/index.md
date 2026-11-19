@@ -20,13 +20,25 @@ TypeScript, Python, Kotlin, Rust, C++, Swift, Dart, C# (*more languages to come*
 
 ## Features
 
-- **[Prompt templates](/reference)**: Bundle instructions, schemas, tools, and few-shot examples in dedicated `.tp` files. Few-shot examples are validated against your schemas.
+**Authoring**
+
 - **[TypeScript-based schemas](/schema)**: Define types with familiar TypeScript syntax. TypePrompt generates native types and standard JSON Schemas for all major LLM providers.
+- **[Few-shot examples](/reference#examples)**: Write examples in YAML, checked against your schemas at build time.
+- **[Typed tools](/reference#the-tool-element)**: Declare tools with typed inputs and outputs, and parse the model's tool calls into native types.
+- **[Snippets and conditional logic](/reference#snippet)**: Reuse text across templates, and switch content on input values with `if` and `switch` snippets.
 - **[Flexible input formatting](/reference#insert)**: Render complex inputs as JSON, YAML, CSV, or [TOON](https://toonformat.dev) without changing application code.
 - **[Custom metadata](/reference#the-meta-element-top-level)**: Define your own `Meta` type to attach typed configuration (model, temperature, routing tags) to each template.
-- **[Variants](/reference#variant) and [template overrides](/template-overrides)**: Author prompt versions that share schemas for A/B testing, or inject overrides at runtime for rapid experimentation.
-- **[Playground inference](/playground)**: Run templates against any LLM from VS Code or the command line.
-- **Tooling**: VS Code extension, standalone Language Server (`npx @typeprompt/language-server`), watch mode, and a built-in formatter. See [CLI and configuration](/cli).
+
+**Experimentation**
+
+- **[Variants](/reference#variant)**: Author prompt versions that share the same schemas, and pick one at runtime for A/B testing.
+- **[Template overrides](/template-overrides)**: Inject modified templates at runtime, without rebuilding or redeploying, for fast iteration and evaluations.
+- **[Playground](/playground)**: Run templates against any LLM from VS Code or the command line.
+
+**Tooling**
+
+- **[CLI](/cli)**: Code generation, watch mode, and a built-in formatter.
+- **Editor support**: VS Code extension and a standalone Language Server (`npx @typeprompt/language-server`).
 
 ## Comparison with other tools
 
