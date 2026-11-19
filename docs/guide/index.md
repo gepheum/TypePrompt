@@ -34,10 +34,10 @@ TypePrompt gets its type safety from code generation. The schemas in your templa
 
 TypePrompt is not an LLM client, and doesn't wrap one. It only renders prompts and parses responses. You send the request with whichever SDK you already use.
 
-| | Prompt and schemas | Template inputs | Response types | Few-shot examples | Calls the model |
-|---|---|---|---|---|---|
-| **Strings in code + structured outputs**<br>(OpenAI SDK, Instructor, Vercel AI SDK) | Scattered across application code | Plain string interpolation | Defined in code, separately from the prompt | Hand-written, not checked | Yes |
-| **Frameworks**<br>(LangChain, Semantic Kernel) | In code or template files | Untyped variables, filled in at runtime | Defined in code, separately from the prompt | Plain data, not checked against the schemas | Yes, through the framework |
-| **Prompt files rendered at runtime**<br>(Dotprompt, Prompty) | Together in prompt files | Checked at runtime | Checked at runtime | Written into the prompt, not checked against the schemas | Yes, through their runtime |
-| **BAML** | Together in prompt files (custom language) | Generated types | Generated types | Written into the prompt, not checked against the schemas | Yes, through its own runtime |
-| **TypePrompt** | Together in prompt files (XML + TypeScript-style schemas) | Generated types | Generated types | Checked against the schemas at build time | No: use any LLM SDK |
+In practice, this rules out bugs that other approaches only catch at runtime, if at all:
+
+- **Mismatched placeholders.** With runtime prompt files (Dotprompt, Prompty) or framework templates (LangChain, Semantic Kernel), renaming a variable on one side and not the other fails at runtime, or silently sends an incomplete prompt.
+- **Output types written twice.** When the schema lives in the prompt file and the type lives in your code, nothing keeps the two in sync.
+- **Stale few-shot examples.** Examples are usually hand-written text that no tool checks. After a schema change, they keep teaching the model the old shape.
+
+[BAML](https://boundaryml.com) also generates types from prompt files. The main differences: TypePrompt checks few-shot examples, doesn't make the LLM call itself, and uses TypeScript type syntax instead of a custom language.
