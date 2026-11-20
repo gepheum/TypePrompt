@@ -660,11 +660,11 @@ describe("toJsonSchema - shared type refs", () => {
     const json = toJsonSchema("Output", schema, schema.unionToMembers);
     expect(json).toMatch({
       properties: {
-        a: { $ref: "#/$defs/_Profile" },
-        b: { $ref: "#/$defs/_Profile" },
+        a: { $ref: "#/$defs/Profile" },
+        b: { $ref: "#/$defs/Profile" },
       },
     });
-    expect(Object.keys(json.$defs as object)).toMatch(["_Profile"]);
+    expect(Object.keys(json.$defs as object)).toMatch(["Profile"]);
   });
 
   it("uses _-prefixed def name to avoid collision with local type names", () => {
@@ -694,7 +694,7 @@ describe("toJsonSchema - shared type refs", () => {
     });
   });
 
-  it("emits _-prefixed $refs when one shared interface refers to another shared interface", () => {
+  it("emits non-prefixed $refs when shared types do not collide with local types", () => {
     const schema = compileTemplate(
       "type Input = string;\ntype Output = shared.User;",
       [
@@ -706,12 +706,12 @@ describe("toJsonSchema - shared type refs", () => {
       type: "object",
       properties: {
         name: { type: "string" },
-        address: { $ref: "#/$defs/_Address" },
+        address: { $ref: "#/$defs/Address" },
       },
       required: ["name", "address"],
       additionalProperties: false,
       $defs: {
-        _Address: {
+        Address: {
           type: "object",
           properties: { city: { type: "string" } },
           required: ["city"],

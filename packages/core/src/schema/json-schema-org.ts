@@ -98,7 +98,7 @@ class Generator {
       const decl = this.getDeclaration(current);
       firstDoc ||= decl?.doc || undefined;
       const valueType = decl?.valueType;
-      const key = toDefName(current);
+      const key = this.toDefName(current);
       if (
         !valueType ||
         (valueType.kind !== "type-name" &&
@@ -133,7 +133,7 @@ class Generator {
 
   private namedTypeToRef(ref: NamedTypeRef): Record<string, unknown> {
     const target = this.resolveAlias(ref);
-    const defName = toDefName(target.ref);
+    const defName = this.toDefName(target.ref);
     if (!this.defs[defName] && !this.inProgress.has(defName)) {
       this.inProgress.add(defName);
       const { decl } = target;
@@ -185,13 +185,14 @@ class Generator {
       ),
     };
   }
+  private toDefName(ref: NamedTypeRef): string {
+    return ref.shared && this.schema.typeDeclarations[ref.name]
+      ? `_${ref.name}`
+      : ref.name;
+  }
 }
 
 type NamedTypeRef = {
   readonly name: string;
   readonly shared: boolean;
 };
-
-function toDefName(ref: NamedTypeRef): string {
-  return ref.shared ? `_${ref.name}` : ref.name;
-}

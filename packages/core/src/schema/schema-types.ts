@@ -54,6 +54,7 @@ export type TypeDeclaration = {
   readonly kind: "type";
   readonly name: TextSpan;
   readonly valueType: Type;
+  /** Docstring, guaranteed to not contain star-slash. */
   readonly doc: string;
 };
 
@@ -94,6 +95,7 @@ export type Interface = {
 export type Field = {
   readonly name: TextSpan;
   readonly type: FieldType;
+  /** Docstring, guaranteed to not contain star-slash. */
   readonly doc: string;
   /**
    * If non-null, tells JSON serializers to omit this field from the generated object
@@ -280,6 +282,7 @@ export type NamingHint = {
             };
       }
   >;
+  /** Docstring, guaranteed to not contain star-slash. */
   readonly doc: string;
 };
 
