@@ -503,10 +503,116 @@ describe("toJsonSchema - named type refs and $defs", () => {
           "\n",
         ),
       ),
-    ).toMatch({
-      $ref: "#/$defs/Status",
-      $defs: { Status: { enum: ["active", "inactive"] } },
+    ).toMatch({ enum: ["active", "inactive"] });
+  });
+
+  it("inlines the target of a top-level alias instead of emitting a root $ref", () => {
+    const schema = gen(
+      ["type Output = Person;", "type Person = { name: string; };"].join("\n"),
+    );
+    expect(schema).toMatch({
+      type: "object",
+      properties: { name: { type: "string" } },
+      required: ["name"],
+      additionalProperties: false,
     });
+    expect(Object.keys(schema).sort()).toMatch([
+      "additionalProperties",
+      "properties",
+      "required",
+      "type",
+    ]);
+  });
+
+  it("follows a chain of top-level aliases to the final type", () => {
+    const schema = gen(
+      [
+        "type Output = Foo;",
+        "type Foo = Bar;",
+        "type Bar = { name: string; };",
+      ].join("\n"),
+    );
+    expect(schema).toMatch({
+      type: "object",
+      properties: { name: { type: "string" } },
+    });
+    expect(schema.$defs).toMatch(undefined);
+  });
+
+  it("points references to any alias in the root chain at the final type", () => {
+    const schema = gen(
+      [
+        "type Output = Foo;",
+        "type Foo = Bar;",
+        "type Bar =",
+        '  | { kind: "leaf"; label: string; }',
+        '  | { kind: "viaFoo"; children: Foo[]; }',
+        '  | { kind: "viaOutput"; parent: Output; }',
+        '  | { kind: "viaBar"; next: Bar; };',
+      ].join("\n"),
+    );
+    const members = schema.anyOf as Array<{
+      properties: Record<string, unknown>;
+    }>;
+    expect(members.length).toMatch(4);
+    expect(members[1]!.properties.children).toMatch({
+      type: "array",
+      items: { $ref: "#/$defs/Bar" },
+    });
+    expect(members[2]!.properties.parent).toMatch({ $ref: "#/$defs/Bar" });
+    expect(members[3]!.properties.next).toMatch({ $ref: "#/$defs/Bar" });
+    expect(Object.keys(schema.$defs as object)).toMatch(["Bar"]);
+  });
+
+  it("adds the root type's doc as the root description", () => {
+    expect(gen("/** Some doc */\ntype Output = { n: number };")).toMatch({
+      type: "object",
+      description: "Some doc",
+    });
+  });
+
+  it("uses the first doc found along a root alias chain", () => {
+    expect(
+      gen(
+        [
+          "/** Output doc */",
+          "type Output = Foo;",
+          "/** Foo doc */",
+          "type Foo = { n: number };",
+        ].join("\n"),
+      ),
+    ).toMatch({ type: "object", description: "Output doc" });
+    const schema = gen(
+      [
+        "type Output = Foo;",
+        "type Foo = Bar;",
+        "/** Bar doc */",
+        "type Bar = { n: number };",
+      ].join("\n"),
+    );
+    expect(schema).toMatch({ type: "object", description: "Bar doc" });
+  });
+
+  it("omits the root description when no type in the chain has a doc", () => {
+    const schema = gen("type Output = { n: number };");
+    expect(schema.description).toMatch(undefined);
+  });
+
+  it("collapses non-root aliases into a single $defs entry", () => {
+    const schema = gen(
+      [
+        "type Output = { a: Foo; b: Bar; };",
+        "type Foo = Bar;",
+        "type Bar = { name: string; };",
+      ].join("\n"),
+    );
+    expect(schema).toMatch({
+      properties: {
+        a: { $ref: "#/$defs/Bar" },
+        b: { $ref: "#/$defs/Bar" },
+      },
+    });
+    expect(Object.keys(schema.$defs as object)).toMatch(["Bar"]);
   });
 });
 
@@ -531,16 +637,30 @@ describe("toJsonSchema - shared type refs", () => {
         "type Profile = { name: string; };",
       ),
     ).toMatch({
-      $ref: "#/$defs/_Profile",
-      $defs: {
-        _Profile: {
-          type: "object",
-          properties: { name: { type: "string" } },
-          required: ["name"],
-          additionalProperties: false,
-        },
+      type: "object",
+      properties: { name: { type: "string" } },
+      required: ["name"],
+      additionalProperties: false,
+    });
+  });
+
+  it("follows a local alias to a shared type", () => {
+    const schema = compileTemplate(
+      [
+        "type Input = string;",
+        "type Output = { a: Local; b: shared.Profile; };",
+        "type Local = shared.Profile;",
+      ].join("\n"),
+      "type Profile = { name: string; };",
+    );
+    const json = toJsonSchema("Output", schema, schema.unionToMembers);
+    expect(json).toMatch({
+      properties: {
+        a: { $ref: "#/$defs/_Profile" },
+        b: { $ref: "#/$defs/_Profile" },
       },
     });
+    expect(Object.keys(json.$defs as object)).toMatch(["_Profile"]);
   });
 
   it("uses _-prefixed def name to avoid collision with local type names", () => {
@@ -579,17 +699,14 @@ describe("toJsonSchema - shared type refs", () => {
       ].join("\n"),
     );
     expect(toJsonSchema("Output", schema, schema.unionToMembers)).toMatch({
-      $ref: "#/$defs/_User",
+      type: "object",
+      properties: {
+        name: { type: "string" },
+        address: { $ref: "#/$defs/_Address" },
+      },
+      required: ["name", "address"],
+      additionalProperties: false,
       $defs: {
-        _User: {
-          type: "object",
-          properties: {
-            name: { type: "string" },
-            address: { $ref: "#/$defs/_Address" },
-          },
-          required: ["name", "address"],
-          additionalProperties: false,
-        },
         _Address: {
           type: "object",
           properties: { city: { type: "string" } },

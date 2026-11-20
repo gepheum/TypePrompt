@@ -2,6 +2,7 @@ import type {
   FieldType,
   Interface,
   SchemaView,
+  TypeDeclaration,
   Union,
   UnionMembers,
 } from "./schema-types.js";
@@ -12,7 +13,13 @@ export function toJsonSchema(
   unionToMembers: ReadonlyMap<Union, UnionMembers>,
 ): Record<string, unknown> {
   const gen = new Generator(schema, unionToMembers);
-  const root = gen.typeToSchema(schema.typeDeclarations[typeName]!.valueType);
+  // If the root type is an alias (e.g. `type Output = Foo`), inline the
+  // aliased type's value at the root rather than emitting a root `$ref`.
+  const target = gen.resolveAlias({ name: typeName, shared: false });
+  const root = gen.typeToSchema(target.decl!.valueType);
+  if (target.firstDoc) {
+    root.description = target.firstDoc;
+  }
   const defs = gen.defs;
   if (Object.keys(defs).length >= 1) {
     root.$defs = defs;
@@ -57,17 +64,12 @@ class Generator {
           additionalProperties: this.typeToSchema(type.valueType),
         };
       }
-      case "shared-type-name": {
-        return this.namedTypeToRef(type.name.text, { shared: true });
+      case "shared-type-name":
+      case "type-name": {
+        return this.namedTypeToRef(this.toNamedTypeRef(type));
       }
       case "string-literal": {
         return { type: "string", const: type.value };
-      }
-      case "type-name": {
-        const shared =
-          type.context === "namespace" &&
-          this.schema.sharedDeclarations !== this.schema.typeDeclarations;
-        return this.namedTypeToRef(type.name.text, { shared });
       }
       case "union": {
         return this.unionToSchema(type);
@@ -75,17 +77,66 @@ class Generator {
     }
   }
 
-  private namedTypeToRef(
-    name: string,
-    options: { readonly shared: boolean },
-  ): Record<string, unknown> {
-    const defName = options.shared ? `_${name}` : name;
+  /**
+   * Follows a chain of aliases (`type A = B; type B = C; ...`) and returns the
+   * first named type whose value is not itself a type name, along with its
+   * declaration. Every type in the chain resolves to the same target, so all
+   * references to any of them share a single `$defs` entry.
+   *
+   * Also returns the first doc comment found along the chain, starting from
+   * `ref` itself.
+   */
+  resolveAlias(ref: NamedTypeRef): {
+    readonly ref: NamedTypeRef;
+    readonly decl: TypeDeclaration | undefined;
+    readonly firstDoc: string | undefined;
+  } {
+    const visited = new Set<string>();
+    let current = ref;
+    let firstDoc: string | undefined;
+    for (;;) {
+      const decl = this.getDeclaration(current);
+      firstDoc ||= decl?.doc || undefined;
+      const valueType = decl?.valueType;
+      const key = toDefName(current);
+      if (
+        !valueType ||
+        (valueType.kind !== "type-name" &&
+          valueType.kind !== "shared-type-name") ||
+        visited.has(key)
+      ) {
+        return { ref: current, decl, firstDoc };
+      }
+      visited.add(key);
+      current = this.toNamedTypeRef(valueType);
+    }
+  }
+
+  private toNamedTypeRef(
+    type: Extract<FieldType, { kind: "type-name" | "shared-type-name" }>,
+  ): NamedTypeRef {
+    if (type.kind === "shared-type-name") {
+      return { name: type.name.text, shared: true };
+    }
+    const shared =
+      type.context === "namespace" &&
+      this.schema.sharedDeclarations !== this.schema.typeDeclarations;
+    return { name: type.name.text, shared };
+  }
+
+  private getDeclaration(ref: NamedTypeRef): TypeDeclaration | undefined {
+    const declarations = ref.shared
+      ? this.schema.sharedDeclarations
+      : this.schema.typeDeclarations;
+    return declarations?.[ref.name];
+  }
+
+  private namedTypeToRef(ref: NamedTypeRef): Record<string, unknown> {
+    const target = this.resolveAlias(ref);
+    const defName = toDefName(target.ref);
     if (!this.defs[defName] && !this.inProgress.has(defName)) {
       this.inProgress.add(defName);
-      const declarations = options.shared
-        ? this.schema.sharedDeclarations
-        : this.schema.typeDeclarations;
-      const decl = declarations?.[name];
+      const { decl } = target;
       if (decl) {
         const defSchema = this.typeToSchema(decl.valueType);
         if (decl.doc) {
@@ -134,4 +185,13 @@ class Generator {
       ),
     };
   }
+}
+
+type NamedTypeRef = {
+  readonly name: string;
+  readonly shared: boolean;
+};
+
+function toDefName(ref: NamedTypeRef): string {
+  return ref.shared ? `_${ref.name}` : ref.name;
 }
