@@ -2400,6 +2400,7 @@ inline Status ParseValue(const JsonNode&, const JsonPath&, Templates&);
 struct OutputFormat_FormatJson {
   bool has_recursive_type{};
   std::map<std::string, JsonNode> json_schema{};
+  std::string typescript_schema{};
 };
 
 inline JsonNode ToJsonNode(const OutputFormat_FormatJson&);
@@ -2976,9 +2977,10 @@ inline Status ParseValue(const JsonNode& node, const JsonPath& context, OutputFo
 inline JsonNode ToJsonNode(const OutputFormat_FormatJson& input) {
   using ::typeprompt::ToJsonNode;
   std::vector<std::pair<std::string_view, JsonNode>> entries;
-  entries.reserve(3);
+  entries.reserve(4);
   entries.push_back({"format", ToJsonNode("json")});
   entries.push_back({"jsonSchema", ToJsonNode(input.json_schema)});
+  entries.push_back({"typescriptSchema", ToJsonNode(input.typescript_schema)});
   entries.push_back({"hasRecursiveType", ToJsonNode(input.has_recursive_type)});
   return internal::MakeJsonObject(std::move(entries));
 }
@@ -2988,6 +2990,7 @@ inline Status ParseValue(const JsonNode& node, const JsonPath& context,
   internal::StructParser parser(&node, context);
   parser.Parse("hasRecursiveType", out.has_recursive_type);
   parser.Parse("jsonSchema", out.json_schema);
+  parser.Parse("typescriptSchema", out.typescript_schema);
   return std::move(parser).status();
 }
 

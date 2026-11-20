@@ -274,6 +274,7 @@ internal object Spec {
     @SerialName("json")
     data class OutputFormat_FormatJson(
         val jsonSchema: Map<String, JsonElement>,
+        val typescriptSchema: String,
         val hasRecursiveType: Boolean,
     ) : OutputFormat
 
@@ -283,6 +284,7 @@ internal object Spec {
     private data class OutputFormat_FormatJson__Surrogate(
         @property:kotlinx.serialization.EncodeDefault val format: String = "json",
         val jsonSchema: Map<String, JsonElement>,
+        val typescriptSchema: String,
         val hasRecursiveType: Boolean,
     )
 
@@ -294,6 +296,7 @@ internal object Spec {
                 OutputFormat_FormatJson__Surrogate.serializer(),
                 OutputFormat_FormatJson__Surrogate(
                     jsonSchema = value.jsonSchema,
+                    typescriptSchema = value.typescriptSchema,
                     hasRecursiveType = value.hasRecursiveType,
                 ),
             )
@@ -303,6 +306,7 @@ internal object Spec {
             val surrogate = decoder.decodeSerializableValue(OutputFormat_FormatJson__Surrogate.serializer())
             return OutputFormat_FormatJson(
                 jsonSchema = surrogate.jsonSchema,
+                typescriptSchema = surrogate.typescriptSchema,
                 hasRecursiveType = surrogate.hasRecursiveType,
             )
         }

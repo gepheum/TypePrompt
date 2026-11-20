@@ -271,7 +271,14 @@ describe("makeTemplates - template basic fields", () => {
       templates: { "Main:T": minimalTemplate("T", null, "json") },
     } as unknown as ValidCompilationResult;
     expect(makeTemplates(result)).toMatch({
-      templates: { "Main:T": { outputFormat: { format: "json" } } },
+      templates: {
+        "Main:T": {
+          outputFormat: {
+            format: "json",
+            typescriptSchema: "type Output = string",
+          },
+        },
+      },
     });
   });
 

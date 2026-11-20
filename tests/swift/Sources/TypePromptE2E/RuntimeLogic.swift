@@ -428,14 +428,17 @@ public enum TypePromptRuntime {
     public struct OutputFormat_FormatJson: Codable, Sendable {
       public let format: String
       public let jsonSchema: [String: JsonElement]
+      public let typescriptSchema: String
       public let hasRecursiveType: Bool
 
       public init(
         jsonSchema: [String: JsonElement],
+        typescriptSchema: String,
         hasRecursiveType: Bool,
       ) {
         self.format = "json"
         self.jsonSchema = jsonSchema
+        self.typescriptSchema = typescriptSchema
         self.hasRecursiveType = hasRecursiveType
       }
     }

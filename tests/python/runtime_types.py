@@ -59,6 +59,12 @@ class _internal:
             validation_alias=pydantic.AliasChoices("jsonSchema", "json_schema"),
             serialization_alias="jsonSchema",
         )
+        typescript_schema: str = pydantic.Field(
+            validation_alias=pydantic.AliasChoices(
+                "typescriptSchema", "typescript_schema"
+            ),
+            serialization_alias="typescriptSchema",
+        )
         has_recursive_type: bool = pydantic.Field(
             validation_alias=pydantic.AliasChoices(
                 "hasRecursiveType", "has_recursive_type"

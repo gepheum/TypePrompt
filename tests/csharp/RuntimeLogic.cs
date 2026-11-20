@@ -872,6 +872,8 @@ file static class Spec
         private readonly string Format = "json";
         [JsonPropertyName("jsonSchema")]
         public required IReadOnlyDictionary<string, JsonElement> JsonSchema { get; init; }
+        [JsonPropertyName("typescriptSchema")]
+        public required string TypescriptSchema { get; init; }
         [JsonPropertyName("hasRecursiveType")]
         public required bool HasRecursiveType { get; init; }
     }

@@ -3,6 +3,7 @@ import type { StrictJsonValue } from "../json/json-types.js";
 import { unwrapJsonValue } from "../json/unwrapper.js";
 import { hasRecursiveType } from "../schema/has-recursive-type.js";
 import { toJsonSchema } from "../schema/json-schema-org.js";
+import { schemaToTypeScript } from "../schema/schema-to-typescript.js";
 import type { Schema, TypeDeclaration } from "../schema/schema-types.js";
 import { normalizeSchemaValue } from "../schema/value-normalizer.js";
 import type {
@@ -116,6 +117,7 @@ function makeTemplate(input: ValidTemplate): Spec.Template {
             jsonSchema: outputJsonSchema as {
               readonly [k: string]: unknown;
             },
+            typescriptSchema: schemaToTypeScript("Output", schema),
             hasRecursiveType: outputHasRecursiveType,
           }
         : {

@@ -26,6 +26,7 @@ export type OutputFormat =
   | {
       readonly format: "json";
       readonly jsonSchema: { [k: string]: unknown };
+      readonly typescriptSchema: string;
       readonly hasRecursiveType: boolean;
     }
   | {

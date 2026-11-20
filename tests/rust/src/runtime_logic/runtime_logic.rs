@@ -828,6 +828,8 @@ mod spec {
   pub(super) struct OutputFormat_FormatJson {
     #[serde(rename = "jsonSchema")]
     pub(super) json_schema: std::collections::HashMap<String, serde_json::Value>,
+    #[serde(rename = "typescriptSchema")]
+    pub(super) typescript_schema: String,
     #[serde(rename = "hasRecursiveType")]
     pub(super) has_recursive_type: bool,
   }
@@ -838,9 +840,14 @@ mod spec {
       S: serde::Serializer,
     {
       let mut state =
-        serde::Serializer::serialize_struct(serializer, "OutputFormat_FormatJson", 3)?;
+        serde::Serializer::serialize_struct(serializer, "OutputFormat_FormatJson", 4)?;
       serde::ser::SerializeStruct::serialize_field(&mut state, "format", &"json")?;
       serde::ser::SerializeStruct::serialize_field(&mut state, "jsonSchema", &self.json_schema)?;
+      serde::ser::SerializeStruct::serialize_field(
+        &mut state,
+        "typescriptSchema",
+        &self.typescript_schema,
+      )?;
       serde::ser::SerializeStruct::serialize_field(
         &mut state,
         "hasRecursiveType",

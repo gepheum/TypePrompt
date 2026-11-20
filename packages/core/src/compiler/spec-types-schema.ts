@@ -27,6 +27,7 @@ type OutputFormat =
   | {
       format: "json";
       jsonSchema: { [k: string]: any };
+      typescriptSchema: string;
       hasRecursiveType: boolean;
     }
   | {

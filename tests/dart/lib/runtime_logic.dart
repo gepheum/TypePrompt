@@ -375,10 +375,12 @@ sealed class _Spec_OutputFormat {
 
 final class _Spec_OutputFormat_FormatJson implements _Spec_OutputFormat {
   final Map<String, dynamic> jsonSchema;
+  final String typescriptSchema;
   final bool hasRecursiveType;
 
   _Spec_OutputFormat_FormatJson({
     required this.jsonSchema,
+    required this.typescriptSchema,
     required this.hasRecursiveType,
   });
 
@@ -387,6 +389,7 @@ final class _Spec_OutputFormat_FormatJson implements _Spec_OutputFormat {
     return {
       "format": "json",
       "jsonSchema": jsonSchema.map((k, v) => MapEntry(k, v)),
+      "typescriptSchema": typescriptSchema,
       "hasRecursiveType": hasRecursiveType,
     };
   }
@@ -400,6 +403,7 @@ final class _Spec_OutputFormat_FormatJson implements _Spec_OutputFormat {
     return _Spec_OutputFormat_FormatJson(
       jsonSchema: (json["jsonSchema"] as Map)
           .map<String, dynamic>((k, v) => MapEntry(k.toString(), v)),
+      typescriptSchema: json["typescriptSchema"],
       hasRecursiveType: json["hasRecursiveType"],
     );
   }
