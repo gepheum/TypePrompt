@@ -80,10 +80,10 @@ export function renderInferenceRequest(
   );
 
   const outputFormat: Inferences.InferenceRequest["outputFormat"] =
-    specTemplate.outputFormat === "json"
+    specTemplate.outputFormat.format === "json"
       ? {
           format: "json",
-          jsonSchema: specTemplate.outputJsonSchema as {
+          jsonSchema: specTemplate.outputFormat.jsonSchema as {
             readonly [k: string]: unknown;
           },
         }

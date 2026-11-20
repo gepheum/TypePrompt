@@ -109,7 +109,18 @@ function makeTemplate(input: ValidTemplate): Spec.Template {
   return {
     name: template.name.text,
     namespace,
-    outputFormat,
+    outputFormat:
+      outputFormat === "json"
+        ? {
+            format: "json",
+            jsonSchema: outputJsonSchema as {
+              readonly [k: string]: unknown;
+            },
+            hasRecursiveType: outputHasRecursiveType,
+          }
+        : {
+            format: "text",
+          },
     tools: Object.entries(tools).map(([name, { tool }]) => ({
       id: namespace.concat(":", tool.tool.name.text),
       name,

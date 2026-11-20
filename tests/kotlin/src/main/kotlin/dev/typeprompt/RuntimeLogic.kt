@@ -255,14 +255,86 @@ internal object Spec {
     )
 
     // Exported as 'Spec.OutputFormat'
-    @Serializable
-    enum class OutputFormat(val value: String) {
-        @SerialName("json")
-        Json("json"),
-        @SerialName("text")
-        Text("text");
+    @Serializable(with = OutputFormat__Serializer::class)
+    sealed interface OutputFormat
 
-        override fun toString(): String = value
+    private object OutputFormat__Serializer : JsonContentPolymorphicSerializer<OutputFormat>(OutputFormat::class) {
+        override fun selectDeserializer(element: JsonElement): DeserializationStrategy<OutputFormat> {
+            return when (val kind = element.jsonObject["format"]?.jsonPrimitive?.contentOrNull) {
+                "json" -> OutputFormat_FormatJson.serializer()
+                "text" -> OutputFormat_FormatText.serializer()
+                else -> throw IllegalArgumentException("Unknown discriminant: '${kind}'")
+            }
+        }
+    }
+
+    // Exported as 'Spec.OutputFormat_FormatJson'
+    @OptIn(ExperimentalSerializationApi::class)
+    @Serializable(with = OutputFormat_FormatJson__Serializer::class)
+    @SerialName("json")
+    data class OutputFormat_FormatJson(
+        val jsonSchema: Map<String, JsonElement>,
+        val hasRecursiveType: Boolean,
+    ) : OutputFormat
+
+    @OptIn(ExperimentalSerializationApi::class)
+    @Serializable
+    @SerialName("json")
+    private data class OutputFormat_FormatJson__Surrogate(
+        @property:kotlinx.serialization.EncodeDefault val format: String = "json",
+        val jsonSchema: Map<String, JsonElement>,
+        val hasRecursiveType: Boolean,
+    )
+
+    private object OutputFormat_FormatJson__Serializer : kotlinx.serialization.KSerializer<OutputFormat_FormatJson> {
+        override val descriptor = OutputFormat_FormatJson__Surrogate.serializer().descriptor
+
+        override fun serialize(encoder: kotlinx.serialization.encoding.Encoder, value: OutputFormat_FormatJson) {
+            encoder.encodeSerializableValue(
+                OutputFormat_FormatJson__Surrogate.serializer(),
+                OutputFormat_FormatJson__Surrogate(
+                    jsonSchema = value.jsonSchema,
+                    hasRecursiveType = value.hasRecursiveType,
+                ),
+            )
+        }
+
+        override fun deserialize(decoder: kotlinx.serialization.encoding.Decoder): OutputFormat_FormatJson {
+            val surrogate = decoder.decodeSerializableValue(OutputFormat_FormatJson__Surrogate.serializer())
+            return OutputFormat_FormatJson(
+                jsonSchema = surrogate.jsonSchema,
+                hasRecursiveType = surrogate.hasRecursiveType,
+            )
+        }
+    }
+
+    // Exported as 'Spec.OutputFormat_FormatText'
+    @OptIn(ExperimentalSerializationApi::class)
+    @Serializable(with = OutputFormat_FormatText__Serializer::class)
+    @SerialName("text")
+    class OutputFormat_FormatText() : OutputFormat
+
+    @OptIn(ExperimentalSerializationApi::class)
+    @Serializable
+    @SerialName("text")
+    private data class OutputFormat_FormatText__Surrogate(
+        @property:kotlinx.serialization.EncodeDefault val format: String = "text",
+    )
+
+    private object OutputFormat_FormatText__Serializer : kotlinx.serialization.KSerializer<OutputFormat_FormatText> {
+        override val descriptor = OutputFormat_FormatText__Surrogate.serializer().descriptor
+
+        override fun serialize(encoder: kotlinx.serialization.encoding.Encoder, value: OutputFormat_FormatText) {
+            encoder.encodeSerializableValue(
+                OutputFormat_FormatText__Surrogate.serializer(),
+                OutputFormat_FormatText__Surrogate(),
+            )
+        }
+
+        override fun deserialize(decoder: kotlinx.serialization.encoding.Decoder): OutputFormat_FormatText {
+            val surrogate = decoder.decodeSerializableValue(OutputFormat_FormatText__Surrogate.serializer())
+            return OutputFormat_FormatText()
+        }
     }
 
     // Exported as 'Spec.TemplateTool'
@@ -1141,7 +1213,7 @@ private fun renderExamples(
         }
 
         val outputFormat =
-            if (tmpl.outputFormat == Spec.OutputFormat.Json) {
+            if (tmpl.outputFormat is Spec.OutputFormat_FormatJson) {
                 Spec.InsertFormat.Json
             } else {
                 Spec.InsertFormat.Text
@@ -1230,24 +1302,25 @@ private inline fun <reified Input, reified Output, ToolExecutor> doRender(
 
     val outputFormat: OutputFormat
     val fromJson: (String) -> Output
-    when (template.outputFormat) {
-        Spec.OutputFormat.Json -> {
+    when (val specFormat = template.outputFormat) {
+        is Spec.OutputFormat_FormatJson -> {
+            val schemaObj = JsonObject(specFormat.jsonSchema)
             outputFormat =
                 JsonOutputFormat(
                     stringifiedJsonSchema =
                         Json.encodeToString(
-                            JsonElement.serializer(),
-                            template.outputJsonSchema,
+                            JsonObject.serializer(),
+                            schemaObj,
                         ),
-                    jsonSchema = template.outputJsonSchema.jsonObject,
-                    hasRecursiveType = template.outputHasRecursiveType,
+                    jsonSchema = schemaObj,
+                    hasRecursiveType = specFormat.hasRecursiveType,
                 )
             fromJson = { text: String ->
                 Json.decodeFromString<Output>(text)
             }
         }
 
-        Spec.OutputFormat.Text -> {
+        is Spec.OutputFormat_FormatText -> {
             outputFormat = TextOutputFormat()
             @Suppress("UNCHECKED_CAST")
             fromJson = { text: String -> text as Output }

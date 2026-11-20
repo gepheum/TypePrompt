@@ -22,7 +22,15 @@ export type Template = {
   readonly outputHasRecursiveType: boolean;
 };
 
-export type OutputFormat = "json" | "text";
+export type OutputFormat =
+  | {
+      readonly format: "json";
+      readonly jsonSchema: { [k: string]: unknown };
+      readonly hasRecursiveType: boolean;
+    }
+  | {
+      readonly format: "text";
+    };
 
 export type TemplateTool = {
   readonly id: string;

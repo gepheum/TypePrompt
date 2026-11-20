@@ -44,10 +44,30 @@ class _internal:
             serialization_alias="outputHasRecursiveType",
         )
 
-    type OutputFormat = Literal[
-        "json",
-        "text",
+    type OutputFormat = Annotated[
+        Union[
+            _internal.OutputFormat_FormatJson,
+            _internal.OutputFormat_FormatText,
+        ],
+        pydantic.Field(discriminator="format"),
     ]
+
+    class OutputFormat_FormatJson(pydantic.BaseModel):
+        model_config = pydantic.ConfigDict(populate_by_name=True)
+        format: Literal["json"]
+        json_schema: dict[str, Any] = pydantic.Field(
+            validation_alias=pydantic.AliasChoices("jsonSchema", "json_schema"),
+            serialization_alias="jsonSchema",
+        )
+        has_recursive_type: bool = pydantic.Field(
+            validation_alias=pydantic.AliasChoices(
+                "hasRecursiveType", "has_recursive_type"
+            ),
+            serialization_alias="hasRecursiveType",
+        )
+
+    class OutputFormat_FormatText(pydantic.BaseModel):
+        format: Literal["text"]
 
     class TemplateTool(pydantic.BaseModel):
         id: str

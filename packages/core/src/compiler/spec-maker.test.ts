@@ -261,7 +261,7 @@ describe("makeTemplates - template basic fields", () => {
       templates: { "Main:T": minimalTemplate("T", null, "text") },
     } as unknown as ValidCompilationResult;
     expect(makeTemplates(result)).toMatch({
-      templates: { "Main:T": { outputFormat: "text" } },
+      templates: { "Main:T": { outputFormat: { format: "text" } } },
     });
   });
 
@@ -271,7 +271,7 @@ describe("makeTemplates - template basic fields", () => {
       templates: { "Main:T": minimalTemplate("T", null, "json") },
     } as unknown as ValidCompilationResult;
     expect(makeTemplates(result)).toMatch({
-      templates: { "Main:T": { outputFormat: "json" } },
+      templates: { "Main:T": { outputFormat: { format: "json" } } },
     });
   });
 

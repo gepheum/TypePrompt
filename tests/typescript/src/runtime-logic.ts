@@ -460,12 +460,15 @@ function renderTemplate<Id extends TemplateId>(
   ): Promise<ReadonlyArray<ToolCallResponse>> =>
     executeToolsImpl(calls, tools, executor);
   const outputFormat = (
-    template.outputFormat === "json"
+    template.outputFormat.format === "json"
       ? {
           format: "json",
           schema: outputSchema,
-          jsonSchema: template.outputJsonSchema as Record<string, unknown>,
-          hasRecursiveType: template.outputHasRecursiveType,
+          jsonSchema: template.outputFormat.jsonSchema as Record<
+            string,
+            unknown
+          >,
+          hasRecursiveType: template.outputFormat.hasRecursiveType,
         }
       : { format: "text" }
   ) as OutputFormat<Id>;
@@ -589,7 +592,7 @@ function renderExamples(
         stringifiedOutput: JSON.stringify(tc.output),
       })),
     })),
-    response: format(output, template.outputFormat),
+    response: format(output, template.outputFormat.format),
   }));
 }
 

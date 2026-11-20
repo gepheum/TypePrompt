@@ -388,9 +388,64 @@ public enum TypePromptRuntime {
       }
     }
 
-    public enum OutputFormat: String, Codable, Sendable {
-      case json = "json"
-      case text = "text"
+    public enum OutputFormat: Codable, Sendable {
+      case formatJson(OutputFormat_FormatJson)
+      case formatText(OutputFormat_FormatText)
+
+      public func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        switch self {
+        case .formatJson(let value):
+          try container.encode(value)
+        case .formatText(let value):
+          try container.encode(value)
+        }
+      }
+
+      private enum DiscriminatorCodingKeys: String, CodingKey {
+        case discriminator = "format"
+      }
+
+      public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: DiscriminatorCodingKeys.self)
+        let discriminator = try container.decode(String.self, forKey: .discriminator)
+        switch discriminator {
+        case "json":
+          self = .formatJson(try OutputFormat_FormatJson(from: decoder))
+        case "text":
+          self = .formatText(try OutputFormat_FormatText(from: decoder))
+        default:
+          throw DecodingError.dataCorrupted(
+            DecodingError.Context(
+              codingPath: decoder.codingPath,
+              debugDescription: "Unknown discriminator: \(discriminator)"
+            )
+          )
+        }
+      }
+    }
+
+    public struct OutputFormat_FormatJson: Codable, Sendable {
+      public let format: String
+      public let jsonSchema: [String: JsonElement]
+      public let hasRecursiveType: Bool
+
+      public init(
+        jsonSchema: [String: JsonElement],
+        hasRecursiveType: Bool,
+      ) {
+        self.format = "json"
+        self.jsonSchema = jsonSchema
+        self.hasRecursiveType = hasRecursiveType
+      }
+    }
+
+    public struct OutputFormat_FormatText: Codable, Sendable {
+      public let format: String
+
+      public init() {
+        self.format = "text"
+      }
     }
 
     public struct TemplateTool: Codable, Sendable {
@@ -1393,7 +1448,13 @@ public enum TypePromptRuntime {
         steps.append(StepExample(toolCalls: toolCalls))
       }
 
-      let outputFormat: Spec.InsertFormat = tmpl.outputFormat == .json ? .json : .text
+      let outputFormat: Spec.InsertFormat
+      switch tmpl.outputFormat {
+      case .formatJson:
+        outputFormat = .json
+      case .formatText:
+        outputFormat = .text
+      }
       let response = formatValue(exOutputObj, outputFormat)
 
       result.append(
@@ -1474,9 +1535,11 @@ public enum TypePromptRuntime {
 
     let outputFormat: OutputFormat
     let fromJson: @Sendable (Data) throws -> Output
-    if template.outputFormat == .json {
+    switch template.outputFormat {
+    case .formatJson(let j):
       let schemaJson: String
-      if let obj = jsonElementToObject(template.outputJsonSchema),
+      let schemaElement = JsonElement.object(j.jsonSchema, Array(j.jsonSchema.keys))
+      if let obj = jsonElementToObject(schemaElement),
         let data = try? JSONSerialization.data(
           withJSONObject: obj, options: [.prettyPrinted, .sortedKeys]),
         let str = String(data: data, encoding: .utf8)
@@ -1494,11 +1557,11 @@ public enum TypePromptRuntime {
       outputFormat = .json(
         JsonOutputFormat(
           stringifiedJsonSchema: schemaJson,
-          jsonSchema: template.outputJsonSchema,
-          hasRecursiveType: template.outputHasRecursiveType,
+          jsonSchema: schemaElement,
+          hasRecursiveType: j.hasRecursiveType,
         )
       )
-    } else {
+    case .formatText:
       fromJson = { data in
         if let str = (String(data: data, encoding: .utf8) ?? String(decoding: data, as: UTF8.self))
           as? Output

@@ -408,12 +408,12 @@ file class SpecRenderer(Spec.Templates spec) : IRenderer
 
         OutputFormat outputFormat = template.OutputFormat switch
         {
-            Spec.OutputFormat.Json => new JsonOutputFormat(
-                template.OutputJsonSchema.GetRawText(),
-                template.OutputJsonSchema,
-                template.OutputHasRecursiveType
+            Spec.OutputFormat_FormatJson j => new JsonOutputFormat(
+                JsonSerializer.Serialize(j.JsonSchema),
+                JsonSerializer.SerializeToElement(j.JsonSchema),
+                j.HasRecursiveType
             ),
-            Spec.OutputFormat.Text => new TextOutputFormat(),
+            Spec.OutputFormat_FormatText => new TextOutputFormat(),
             _ => throw new ArgumentOutOfRangeException(nameof(template.OutputFormat)),
         };
 
@@ -710,7 +710,7 @@ file class SpecRenderer(Spec.Templates spec) : IRenderer
                 steps.Add(new StepExample(toolCalls));
             }
 
-            var outputFormat = tmpl.OutputFormat == Spec.OutputFormat.Json
+            var outputFormat = tmpl.OutputFormat is Spec.OutputFormat_FormatJson
                 ? Spec.InsertFormat.Json
                 : Spec.InsertFormat.Text;
             var response = FormatValue(exOutputObj, outputFormat);
@@ -835,12 +835,52 @@ file static class Spec
         public required bool OutputHasRecursiveType { get; init; }
     }
 
-    [JsonConverter(typeof(JsonStringEnumConverter))]
-    public enum OutputFormat {
-        [JsonStringEnumMemberName("json")]
-        Json,
-        [JsonStringEnumMemberName("text")]
-        Text,
+    /// <summary>
+    /// Implementations: <see cref="OutputFormat_FormatJson"/>, <see cref="OutputFormat_FormatText"/>.
+    /// </summary>
+    [JsonConverter(typeof(OutputFormat__Converter))]
+    public interface OutputFormat
+    { }
+
+    internal sealed class OutputFormat__Converter : JsonConverter<OutputFormat>
+    {
+        public override OutputFormat? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) {
+            using var doc = JsonDocument.ParseValue(ref reader);
+            var root = doc.RootElement;
+            if (!root.TryGetProperty("format", out var discElem))
+            {
+                throw new JsonException("Missing discriminator property 'format'");
+            }
+            var discriminant = discElem.GetString();
+            return discriminant switch
+            {
+                "json" => JsonSerializer.Deserialize<OutputFormat_FormatJson>(root, options),
+                "text" => JsonSerializer.Deserialize<OutputFormat_FormatText>(root, options),
+                _ => throw new JsonException($"Unknown discriminant value '{discriminant}'")
+            };
+        }
+
+        public override void Write(Utf8JsonWriter writer, OutputFormat value, JsonSerializerOptions options) {
+            JsonSerializer.Serialize(writer, value, value.GetType(), options);
+        }
+    }
+
+    public sealed record OutputFormat_FormatJson : OutputFormat
+    {
+        [JsonInclude]
+        [JsonPropertyName("format")]
+        private readonly string Format = "json";
+        [JsonPropertyName("jsonSchema")]
+        public required IReadOnlyDictionary<string, JsonElement> JsonSchema { get; init; }
+        [JsonPropertyName("hasRecursiveType")]
+        public required bool HasRecursiveType { get; init; }
+    }
+
+    public sealed record OutputFormat_FormatText : OutputFormat
+    {
+        [JsonInclude]
+        [JsonPropertyName("format")]
+        private readonly string Format = "text";
     }
 
     public sealed record TemplateTool

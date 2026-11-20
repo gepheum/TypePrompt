@@ -539,7 +539,7 @@ class _TemplateImpl[Input, Output, ToolExecutor]:
                             )
                             for step in ex.steps
                         ],
-                        response=format_value(ex.output, tmpl.output_format),
+                        response=format_value(ex.output, tmpl.output_format.format),
                     )
                 )
             return result
@@ -602,13 +602,13 @@ class _TemplateImpl[Input, Output, ToolExecutor]:
 
         tools = {tool_spec.name: make_tool(tool_spec) for tool_spec in template.tools}
 
-        if template.output_format == "json":
+        if template.output_format.format == "json":
             output_format = cast(
                 OutputFormat[Output],
                 JsonOutputFormat(
                     format="json",
-                    json_schema=cast(dict[str, Any], template.output_json_schema),
-                    has_recursive_type=template.output_has_recursive_type,
+                    json_schema=template.output_format.json_schema,
+                    has_recursive_type=template.output_format.has_recursive_type,
                     type_adapter=output_adapter,
                 ),
             )

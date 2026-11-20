@@ -358,28 +358,70 @@ final class _Spec_Template {
   }
 }
 
-enum _Spec_OutputFormat {
-  json,
-  text;
+sealed class _Spec_OutputFormat {
+  Map<String, dynamic> toJson();
 
-  String toJson() {
-    switch (this) {
-      case json:
-        return "json";
-      case text:
-        return "text";
+  factory _Spec_OutputFormat.fromJson(Map<String, dynamic> json) {
+    switch (json['format']) {
+      case "json":
+        return _Spec_OutputFormat_FormatJson.fromJson(json);
+      case "text":
+        return _Spec_OutputFormat_FormatText.fromJson(json);
+      default:
+        throw FormatException("Unknown discriminator: ${json['format']}");
     }
   }
+}
 
-  factory _Spec_OutputFormat.fromJson(String value) {
-    switch (value) {
-      case "json":
-        return _Spec_OutputFormat.json;
-      case "text":
-        return _Spec_OutputFormat.text;
-      default:
-        throw FormatException("Unknown json value: $value");
-    }
+final class _Spec_OutputFormat_FormatJson implements _Spec_OutputFormat {
+  final Map<String, dynamic> jsonSchema;
+  final bool hasRecursiveType;
+
+  _Spec_OutputFormat_FormatJson({
+    required this.jsonSchema,
+    required this.hasRecursiveType,
+  });
+
+  @override
+  Map<String, dynamic> toJson() {
+    return {
+      "format": "json",
+      "jsonSchema": jsonSchema.map((k, v) => MapEntry(k, v)),
+      "hasRecursiveType": hasRecursiveType,
+    };
+  }
+
+  @override
+  String toString() {
+    return JsonEncoder.withIndent("  ").convert(toJson());
+  }
+
+  factory _Spec_OutputFormat_FormatJson.fromJson(Map<String, dynamic> json) {
+    return _Spec_OutputFormat_FormatJson(
+      jsonSchema: (json["jsonSchema"] as Map)
+          .map<String, dynamic>((k, v) => MapEntry(k.toString(), v)),
+      hasRecursiveType: json["hasRecursiveType"],
+    );
+  }
+}
+
+final class _Spec_OutputFormat_FormatText implements _Spec_OutputFormat {
+  _Spec_OutputFormat_FormatText();
+
+  @override
+  Map<String, dynamic> toJson() {
+    return {
+      "format": "text",
+    };
+  }
+
+  @override
+  String toString() {
+    return JsonEncoder.withIndent("  ").convert(toJson());
+  }
+
+  factory _Spec_OutputFormat_FormatText.fromJson(Map<String, dynamic> json) {
+    return _Spec_OutputFormat_FormatText();
   }
 }
 
@@ -1310,7 +1352,7 @@ UnmodifiableListView<FewShotExample> _renderExamples(
       ));
     }
 
-    final outputFormat = tmpl.outputFormat == _Spec_OutputFormat.json
+    final outputFormat = tmpl.outputFormat is _Spec_OutputFormat_FormatJson
         ? _Spec_InsertFormat.json
         : _Spec_InsertFormat.text;
     final response = _formatValue(ex.output, outputFormat);
@@ -1398,12 +1440,12 @@ Prompt<Output, ToolExecutor> _doRender<Output, ToolExecutor>(
   }
 
   final OutputFormat outputFormat;
-  if (template.outputFormat == _Spec_OutputFormat.json) {
+  final specFormat = template.outputFormat;
+  if (specFormat is _Spec_OutputFormat_FormatJson) {
     outputFormat = JsonOutputFormat._(
-      stringifiedJsonSchema: jsonEncode(template.outputJsonSchema),
-      jsonSchema:
-          UnmodifiableMapView<String, dynamic>(template.outputJsonSchema),
-      hasRecursiveType: template.outputHasRecursiveType,
+      stringifiedJsonSchema: jsonEncode(specFormat.jsonSchema),
+      jsonSchema: UnmodifiableMapView<String, dynamic>(specFormat.jsonSchema),
+      hasRecursiveType: specFormat.hasRecursiveType,
     );
   } else {
     outputFormat = const TextOutputFormat();

@@ -2359,7 +2359,9 @@ using Meta = double;
 namespace internal::spec {
 struct Templates;
 struct Template;
-enum class OutputFormat_;
+struct OutputFormat_;
+struct OutputFormat_FormatJson;
+struct OutputFormat_FormatText;
 struct TemplateTool;
 struct TemplateContents;
 struct TemplateContents_KindNoVariants;
@@ -2395,9 +2397,68 @@ struct Templates {
 inline JsonNode ToJsonNode(const Templates&);
 inline Status ParseValue(const JsonNode&, const JsonPath&, Templates&);
 
-enum class OutputFormat_ {
-  kJson,
-  kText,
+struct OutputFormat_FormatJson {
+  bool has_recursive_type{};
+  std::map<std::string, JsonNode> json_schema{};
+};
+
+inline JsonNode ToJsonNode(const OutputFormat_FormatJson&);
+inline Status ParseValue(const JsonNode&, const JsonPath&, OutputFormat_FormatJson&);
+
+struct OutputFormat_ {
+ public:
+  using variant_type =
+      std::variant<indirect<OutputFormat_FormatJson>, indirect<OutputFormat_FormatText>>;
+
+  OutputFormat_() : data_(OutputFormat_FormatJson()) {}
+  OutputFormat_(variant_type data) : data_(std::move(data)) {}
+
+  OutputFormat_(const OutputFormat_&) = default;
+  OutputFormat_(OutputFormat_&&) = default;
+
+  OutputFormat_& operator=(variant_type data) {
+    data_ = std::move(data);
+    return *this;
+  }
+  OutputFormat_& operator=(const OutputFormat_&) = default;
+  OutputFormat_& operator=(OutputFormat_&&) = default;
+
+  enum class format {
+    kJson,
+    kText,
+  };
+  format format() const { return static_cast<enum format>(data_.index()); }
+
+  /// Precondition: format() == OutputFormat_::format::kJson
+  const OutputFormat_FormatJson& as_format_json() const& { return *std::get<0>(data_); }
+  OutputFormat_FormatJson& as_format_json() & { return *std::get<0>(data_); }
+  indirect<OutputFormat_FormatJson> as_format_json() && { return std::move(std::get<0>(data_)); }
+
+  /// Precondition: format() == OutputFormat_::format::kText
+  const OutputFormat_FormatText& as_format_text() const& { return *std::get<1>(data_); }
+  OutputFormat_FormatText& as_format_text() & { return *std::get<1>(data_); }
+  indirect<OutputFormat_FormatText> as_format_text() && { return std::move(std::get<1>(data_)); }
+
+  template <typename Visitor>
+  decltype(auto) visit(Visitor&& visitor) const& {
+    return std::visit([&visitor](const auto& boxed) -> decltype(auto) { return visitor(*boxed); },
+                      data_);
+  }
+  template <typename Visitor>
+  decltype(auto) visit(Visitor&& visitor) & {
+    return std::visit([&visitor](auto& boxed) -> decltype(auto) { return visitor(*boxed); }, data_);
+  }
+  template <typename Visitor>
+  decltype(auto) visit(Visitor&& visitor) && {
+    return std::visit(
+        [&visitor](auto&& boxed) -> decltype(auto) {
+          return visitor(*std::forward<decltype(boxed)>(boxed));
+        },
+        std::move(data_));
+  }
+
+ private:
+  variant_type data_;
 };
 
 inline JsonNode ToJsonNode(const OutputFormat_&);
@@ -2609,6 +2670,11 @@ struct Template {
 
 inline JsonNode ToJsonNode(const Template&);
 inline Status ParseValue(const JsonNode&, const JsonPath&, Template&);
+
+struct OutputFormat_FormatText {};
+
+inline JsonNode ToJsonNode(const OutputFormat_FormatText&);
+inline Status ParseValue(const JsonNode&, const JsonPath&, OutputFormat_FormatText&);
 
 struct TemplateContents_KindVariants {
   TemplateContent default_content{};
@@ -2882,28 +2948,61 @@ inline Status ParseValue(const JsonNode& node, const JsonPath& context, Template
   return std::move(parser).status();
 }
 
-inline constexpr std::string_view to_string_view(OutputFormat_ input) {
-  switch (input) {
-    case OutputFormat_::kText:
-      return "text";
-    default:
-      return "json";
-  }
+inline JsonNode ToJsonNode(const OutputFormat_& input) {
+  using ::typeprompt::ToJsonNode;
+  return input.visit([](const auto& v) { return ToJsonNode(v); });
 }
 
-inline JsonNode ToJsonNode(const OutputFormat_& input) { return JsonNode(to_string_view(input)); }
-
 inline Status ParseValue(const JsonNode& node, const JsonPath& context, OutputFormat_& out) {
-  if (node.type() != JsonNode::Type::kString) {
-    return context.MakeError("Expected string");
-  } else if (node.as_string() == "json") {
-    out = OutputFormat_::kJson;
-  } else if (node.as_string() == "text") {
-    out = OutputFormat_::kText;
+  using ::typeprompt::ParseValue;
+  auto discriminant = internal::Unions::FindStringDiscriminant(node, context, "format");
+  auto status = kOkStatus;
+  if (!discriminant.ok()) {
+    return std::move(discriminant).error();
+  } else if (*discriminant == "json") {
+    OutputFormat_FormatJson v;
+    status = ParseValue(node, context, v);
+    out = std::move(v);
+  } else if (*discriminant == "text") {
+    OutputFormat_FormatText v;
+    status = ParseValue(node, context, v);
+    out = std::move(v);
   } else {
-    return context.MakeError(std::format("Unknown constant '{}'", node.as_string()));
+    return context.MakeError(std::format("Unknown discriminant '{}'", *discriminant));
   }
-  return kOkStatus;
+  return status;
+}
+
+inline JsonNode ToJsonNode(const OutputFormat_FormatJson& input) {
+  using ::typeprompt::ToJsonNode;
+  std::vector<std::pair<std::string_view, JsonNode>> entries;
+  entries.reserve(3);
+  entries.push_back({"format", ToJsonNode("json")});
+  entries.push_back({"jsonSchema", ToJsonNode(input.json_schema)});
+  entries.push_back({"hasRecursiveType", ToJsonNode(input.has_recursive_type)});
+  return internal::MakeJsonObject(std::move(entries));
+}
+
+inline Status ParseValue(const JsonNode& node, const JsonPath& context,
+                         OutputFormat_FormatJson& out) {
+  internal::StructParser parser(&node, context);
+  parser.Parse("hasRecursiveType", out.has_recursive_type);
+  parser.Parse("jsonSchema", out.json_schema);
+  return std::move(parser).status();
+}
+
+inline JsonNode ToJsonNode(const OutputFormat_FormatText& input) {
+  using ::typeprompt::ToJsonNode;
+  std::vector<std::pair<std::string_view, JsonNode>> entries;
+  entries.reserve(1);
+  entries.push_back({"format", ToJsonNode("text")});
+  return internal::MakeJsonObject(std::move(entries));
+}
+
+inline Status ParseValue(const JsonNode& node, const JsonPath& context,
+                         OutputFormat_FormatText& out) {
+  internal::StructParser parser(&node, context);
+  return std::move(parser).status();
 }
 
 inline JsonNode ToJsonNode(const TemplateTool& input) {
@@ -3714,14 +3813,16 @@ class Renderer {
       tools[template_tool.name] = std::move(tool);
     }
 
-    OutputFormat output_format = (template_val.output_format == spec::OutputFormat_::kJson)
-                                     ? OutputFormat::kJson
-                                     : OutputFormat::kText;
+    OutputFormat output_format =
+        (template_val.output_format.format() == spec::OutputFormat_::format::kJson)
+            ? OutputFormat::kJson
+            : OutputFormat::kText;
     std::optional<JsonNode> output_json_schema;
     bool output_has_recursive_type = false;
     if (output_format == OutputFormat::kJson) {
-      output_json_schema = template_val.output_json_schema;
-      output_has_recursive_type = template_val.output_has_recursive_type;
+      const auto& json_fmt = template_val.output_format.as_format_json();
+      output_json_schema = ToJsonNode(json_fmt.json_schema);
+      output_has_recursive_type = json_fmt.has_recursive_type;
     }
 
     return Prompt{
@@ -4080,9 +4181,10 @@ class Renderer {
         });
       }
 
-      spec::InsertFormat output_format = (tmpl.output_format == spec::OutputFormat_::kJson)
-                                             ? spec::InsertFormat::kJson
-                                             : spec::InsertFormat::kText;
+      spec::InsertFormat output_format =
+          (tmpl.output_format.format() == spec::OutputFormat_::format::kJson)
+              ? spec::InsertFormat::kJson
+              : spec::InsertFormat::kText;
       std::string response = FormatValue(ex.output, output_format);
 
       result.push_back(FewShotExample{

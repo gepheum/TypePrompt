@@ -17,7 +17,6 @@ import {
   type ApiKeys,
   type ModelProviderName,
   type PlaygroundModel,
-  type Spec,
   type ValidCompilationResult,
   type ValidTemplate,
 } from "@typeprompt/core";
@@ -446,7 +445,7 @@ async function executeSampleInference(
 
 function toModelMessages(
   messages: readonly Inferences.Message[],
-  outputFormat: Spec.OutputFormat,
+  outputFormat: "json" | "text",
 ): ModelMessage[] {
   return messages.map((msg): ModelMessage => {
     switch (msg.role) {

@@ -605,8 +605,10 @@ fn render_examples(
     let response_str = match &example.output {
       serde_json::Value::String(s) => s.clone(),
       other => match template.output_format {
-        spec::OutputFormat::Json => serde_json::to_string_pretty(other).unwrap_or_default(),
-        spec::OutputFormat::Text => other.to_string(),
+        spec::OutputFormat::FormatJson(_) => {
+          serde_json::to_string_pretty(other).unwrap_or_default()
+        }
+        spec::OutputFormat::FormatText(_) => other.to_string(),
       },
     };
     result.push(FewShotExample {
@@ -680,17 +682,17 @@ fn do_render<Input: serde::Serialize, Output, ToolExecutor: ?Sized>(
     }
   }
 
-  let output_format = match template.output_format {
-    spec::OutputFormat::Json => {
-      let schema_str =
-        serde_json::to_string_pretty(&template.output_json_schema).unwrap_or_default();
+  let output_format = match &template.output_format {
+    spec::OutputFormat::FormatJson(j) => {
+      let schema_val = serde_json::to_value(&j.json_schema).unwrap_or(serde_json::Value::Null);
+      let schema_str = serde_json::to_string_pretty(&schema_val).unwrap_or_default();
       OutputFormat::Json(JsonOutputFormat {
         stringified_json_schema: schema_str,
-        json_schema: template.output_json_schema.clone(),
-        has_recursive_type: template.output_has_recursive_type,
+        json_schema: schema_val,
+        has_recursive_type: j.has_recursive_type,
       })
     }
-    spec::OutputFormat::Text => OutputFormat::Text(TextOutputFormat),
+    spec::OutputFormat::FormatText(_) => OutputFormat::Text(TextOutputFormat),
   };
 
   let meta_val = template_content
@@ -778,26 +780,88 @@ mod spec {
     pub(super) output_has_recursive_type: bool,
   }
 
-  #[derive(Clone, serde::Serialize, serde::Deserialize, Debug, PartialEq)]
+  #[derive(Clone, Debug, PartialEq)]
   pub(super) enum OutputFormat {
-    #[serde(rename = "json")]
-    Json,
-    #[serde(rename = "text")]
-    Text,
+    FormatJson(OutputFormat_FormatJson),
+    FormatText(OutputFormat_FormatText),
   }
 
-  impl OutputFormat {
-    pub(super) const fn as_str(&self) -> &'static str {
+  impl serde::Serialize for OutputFormat {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+      S: serde::Serializer,
+    {
       match self {
-        Self::Json => "json",
-        Self::Text => "text",
+        OutputFormat::FormatJson(v) => serde::Serialize::serialize(v, serializer),
+        OutputFormat::FormatText(v) => serde::Serialize::serialize(v, serializer),
       }
     }
   }
 
-  impl std::fmt::Display for OutputFormat {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-      write!(f, "{}", self.as_str())
+  impl<'de> serde::Deserialize<'de> for OutputFormat {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+      D: serde::Deserializer<'de>,
+    {
+      let value = serde_json::Value::deserialize(deserializer)?;
+      let discriminant = value
+        .get("format")
+        .and_then(serde_json::Value::as_str)
+        .ok_or_else(|| serde::de::Error::missing_field("format"))?;
+      match discriminant {
+        "json" => {
+          let v =
+            <OutputFormat_FormatJson>::deserialize(value).map_err(serde::de::Error::custom)?;
+          Ok(OutputFormat::FormatJson(v))
+        }
+        "text" => {
+          let v =
+            <OutputFormat_FormatText>::deserialize(value).map_err(serde::de::Error::custom)?;
+          Ok(OutputFormat::FormatText(v))
+        }
+        other => Err(serde::de::Error::unknown_variant(other, &["json", "text"])),
+      }
+    }
+  }
+
+  #[derive(Clone, serde::Deserialize, Debug, PartialEq)]
+  pub(super) struct OutputFormat_FormatJson {
+    #[serde(rename = "jsonSchema")]
+    pub(super) json_schema: std::collections::HashMap<String, serde_json::Value>,
+    #[serde(rename = "hasRecursiveType")]
+    pub(super) has_recursive_type: bool,
+  }
+
+  impl serde::Serialize for OutputFormat_FormatJson {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+      S: serde::Serializer,
+    {
+      let mut state =
+        serde::Serializer::serialize_struct(serializer, "OutputFormat_FormatJson", 3)?;
+      serde::ser::SerializeStruct::serialize_field(&mut state, "format", &"json")?;
+      serde::ser::SerializeStruct::serialize_field(&mut state, "jsonSchema", &self.json_schema)?;
+      serde::ser::SerializeStruct::serialize_field(
+        &mut state,
+        "hasRecursiveType",
+        &self.has_recursive_type,
+      )?;
+      serde::ser::SerializeStruct::end(state)
+    }
+  }
+
+  #[derive(Clone, serde::Deserialize, Debug, PartialEq)]
+  pub(super) struct OutputFormat_FormatText {}
+
+  impl serde::Serialize for OutputFormat_FormatText {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+      S: serde::Serializer,
+    {
+      let mut state =
+        serde::Serializer::serialize_struct(serializer, "OutputFormat_FormatText", 1)?;
+      serde::ser::SerializeStruct::serialize_field(&mut state, "format", &"text")?;
+      serde::ser::SerializeStruct::end(state)
     }
   }
 

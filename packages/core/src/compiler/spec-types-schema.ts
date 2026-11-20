@@ -23,7 +23,15 @@ type Template = {
   outputHasRecursiveType: boolean;
 };
 
-type OutputFormat = "json" | "text";
+type OutputFormat =
+  | {
+      format: "json";
+      jsonSchema: { [k: string]: any };
+      hasRecursiveType: boolean;
+    }
+  | {
+      format: "text";
+    };
 
 type TemplateTool = {
   id: string;
