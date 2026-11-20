@@ -35,6 +35,10 @@ class _internal:
             validation_alias=pydantic.AliasChoices('outputJsonSchema', 'output_json_schema'),
             serialization_alias='outputJsonSchema',
         )
+        has_recursive_type: bool = pydantic.Field(
+            validation_alias=pydantic.AliasChoices('hasRecursiveType', 'has_recursive_type'),
+            serialization_alias='hasRecursiveType',
+        )
 
     type OutputFormat = Literal[
         'json',

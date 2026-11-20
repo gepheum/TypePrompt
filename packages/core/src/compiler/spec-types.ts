@@ -19,6 +19,7 @@ export type Template = {
   readonly contents: TemplateContents;
   readonly snippets: { [name: string]: Snippet };
   readonly outputJsonSchema: unknown;
+  readonly hasRecursiveType: boolean;
 };
 
 export type OutputFormat = "json" | "text";

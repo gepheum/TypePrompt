@@ -23,7 +23,7 @@ features:
     details: Enforces compile-time type safety across every stage of the LLM lifecycle — resolving template placeholders, parsing model responses, and dispatching tool calls.
   - icon: 🔷
     title: TypeScript-based schemas
-    details: Define schemas with familiar TypeScript syntax. TypePrompt translates them into native types across 8 languages, and generates standard JSON Schemas for all major LLM providers.
+    details: Define schemas with familiar TypeScript syntax. TypePrompt translates them into native types across 8 languages, and generates strict JSON Schemas for all major LLM providers.
   - icon: ✅
     title: Validated few-shot examples
     details: Author few-shot examples in YAML that are validated against your schemas and automatically formatted with your user instructions.

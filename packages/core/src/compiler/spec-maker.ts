@@ -1,6 +1,7 @@
 import type { Expression } from "../expression/expression-types.js";
 import type { StrictJsonValue } from "../json/json-types.js";
 import { unwrapJsonValue } from "../json/unwrapper.js";
+import { hasRecursiveType } from "../schema/has-recursive-type.js";
 import { toJsonSchema } from "../schema/json-schema-org.js";
 import type { Schema, TypeDeclaration } from "../schema/schema-types.js";
 import { normalizeSchemaValue } from "../schema/value-normalizer.js";
@@ -100,27 +101,29 @@ type TemplateContext = {
 };
 
 function makeTemplate(input: ValidTemplate): Spec.Template {
-  const { template } = input;
+  const { inputType, outputFormat, outputType, schema, template, tools } =
+    input;
   const namespace = template.namespace?.text ?? DEFAULT_NAMESPACE;
-  const { outputJsonSchema } = makeJsonSchemas(input.schema);
+  const { outputJsonSchema } = makeJsonSchemas(schema);
   return {
     name: template.name.text,
-    namespace: namespace,
-    outputFormat: input.outputFormat,
-    tools: Object.entries(input.tools).map(([name, { tool }]) => ({
+    namespace,
+    outputFormat,
+    tools: Object.entries(tools).map(([name, { tool }]) => ({
       id: namespace.concat(":", tool.tool.name.text),
       name,
     })),
     contents: makeContents(template.contents, {
       namespace,
-      schema: input.schema,
-      inputType: input.inputType,
-      outputType: input.outputType,
-      tools: input.tools,
+      schema,
+      inputType,
+      outputType,
+      tools,
       variantCase: null,
     }),
     snippets: makeSnippets(template.snippets),
     outputJsonSchema,
+    hasRecursiveType: hasRecursiveType(schema, "Output"),
   };
 }
 

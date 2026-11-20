@@ -239,6 +239,7 @@ internal object Spec {
         val contents: TemplateContents,
         val snippets: Map<String, Snippet>,
         val outputJsonSchema: JsonElement,
+        val hasRecursiveType: Boolean,
     )
 
     // Exported as 'Spec.OutputFormat'

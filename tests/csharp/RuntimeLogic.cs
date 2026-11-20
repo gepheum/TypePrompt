@@ -815,6 +815,8 @@ file static class Spec
         public required IReadOnlyDictionary<string, Snippet> Snippets { get; init; }
         [JsonPropertyName("outputJsonSchema")]
         public required JsonElement OutputJsonSchema { get; init; }
+        [JsonPropertyName("hasRecursiveType")]
+        public required bool HasRecursiveType { get; init; }
     }
 
     [JsonConverter(typeof(JsonStringEnumConverter))]

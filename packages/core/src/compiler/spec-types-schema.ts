@@ -20,6 +20,7 @@ type Template = {
   contents: TemplateContents;
   snippets: { [name: string]: Snippet };
   outputJsonSchema: any;
+  hasRecursiveType: boolean;
 };
 
 type OutputFormat = "json" | "text";
