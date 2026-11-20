@@ -459,7 +459,6 @@ describe("parseBody - <insert schema='...' format='...' />", () => {
         {
           kind: "insert-schema",
           schema: { text: "Output" },
-          format: { text: "typescript" },
           indent: "",
         },
       ],
@@ -481,7 +480,6 @@ describe("parseBody - <insert schema='...' format='...' />", () => {
         {
           kind: "insert-schema",
           schema: { text: "Output" },
-          format: { text: "typescript" },
           indent: "  ",
         },
       ],
