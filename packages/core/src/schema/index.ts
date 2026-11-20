@@ -25,4 +25,6 @@ export { resolveType } from "./type-resolver.js";
 
 export { makeExampleValue } from "./example-maker.js";
 
+export { hasRecursiveType } from "./has-recursive-type.js";
+
 export { normalizeSchemaValue } from "./value-normalizer.js";

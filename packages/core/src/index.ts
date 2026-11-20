@@ -87,6 +87,7 @@ export {
 export {
   NAME_SCOPES,
   getNameDependencies,
+  hasRecursiveType,
   isLiteralType,
   makeExampleValue,
   normalizeSchemaValue,
