@@ -41,16 +41,6 @@ Declarations may be separated by semicolons or newlines; semicolons are optional
 
 ---
 
-## Any type
-
-The keyword `any` is supported and maps to an unconstrained value:
-
-```ts
-type Payload = any;
-```
-
----
-
 ## Interfaces
 
 An interface is an ordered set of named fields enclosed in `{ }`.
@@ -71,21 +61,9 @@ Rules:
 
 ---
 
-## Records
-
-A record maps arbitrary string keys to values of a single type:
-
-```ts
-type Scores = { [name: string]: number };
-```
-
-The key type must always be `string`; other key types (e.g. `number`) are not supported. The key name (`name` above) is only used as documentation; it does not affect runtime behavior.
-
----
-
 ## Arrays
 
-Append `[]` to any type to produce a read-only array:
+Append `[]` to a type to produce a read-only array:
 
 ```ts
 type Tags = string[];
