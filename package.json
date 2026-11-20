@@ -6,19 +6,19 @@
     "packages/*"
   ],
   "scripts": {
-    "make-static-snippets": "tsx packages/cli/src/static-snippets/make-static-snippets.ts",
-    "copy-spec-types": "tsx packages/cli/src/static-snippets/copy-spec-types.ts",
+    "make-static-snippets": "tsx scripts/make-static-snippets.ts",
+    "copy-spec-types": "tsx scripts/copy-spec-types.ts",
     "build": "npm run build --workspace=@typeprompt/core && npm run build --workspace=@typeprompt/inference-runner && npm run build --workspace=@typeprompt/formatter && npm run build --workspace=@typeprompt/inference-element && npm run build --workspace=@typeprompt/codemirror && npm run build --workspace=typeprompt && npm run build --workspace=@typeprompt/language-server && npm run build --workspace=typeprompt-vscode && npm run build --workspace=@typeprompt/website",
-    "typecheck": "npm run typecheck --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present && tsc --noEmit -p scripts/tsconfig.json",
     "website:dev": "npm run dev --workspace=@typeprompt/website",
     "website:build": "npm run build --workspace=@typeprompt/website",
     "start": "node packages/cli/dist/main.js",
     "dev": "tsx packages/cli/src/main.ts",
     "test": "node --import tsx ./node_modules/mocha/bin/mocha.js \"packages/*/{src,dev}/**/*.test.ts\"",
-    "lint": "eslint 'packages/*/{src,dev}/**/*.ts'",
-    "lint:fix": "eslint 'packages/*/{src,dev}/**/*.ts' --fix",
-    "format": "prettier --write \"packages/*/{src,dev}/**/*.ts\"",
-    "format:check": "prettier --check \"packages/*/{src,dev}/**/*.ts\""
+    "lint": "eslint 'packages/*/{src,dev}/**/*.ts' 'scripts/**/*.ts'",
+    "lint:fix": "eslint 'packages/*/{src,dev}/**/*.ts' 'scripts/**/*.ts' --fix",
+    "format": "prettier --write \"packages/*/{src,dev}/**/*.ts\" \"scripts/**/*.ts\"",
+    "format:check": "prettier --check \"packages/*/{src,dev}/**/*.ts\" \"scripts/**/*.ts\""
   },
   "overrides": {
     "serialize-javascript": "^7.0.5",

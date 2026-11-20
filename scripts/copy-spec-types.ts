@@ -1,4 +1,4 @@
-// Run with: npm run copy-spec-types [-- --dry-run] [--lang <language>]
+// Run with: npm run copy-spec-types [-- --dry-run]
 //
 // For each supported language, copies the section defining the 'Spec' types
 // from a generated file in tests/ (produced by tests/test.sh) to the
@@ -10,7 +10,6 @@
 //
 // The generated code is not formatted, so run tests/format-all.sh afterwards.
 // With --dry-run, reports what would change without writing anything.
-// With --lang, only processes the given language.
 //
 // For TypeScript, tests/typescript/src/runtime-logic.ts imports the spec types
 // from packages/core/src/compiler/spec-types.ts, so that is the file updated.
@@ -210,14 +209,9 @@ const LANGUAGES: readonly Language[] = [
 ];
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const TESTS_DIR = path.join(__dirname, "../../../../tests");
+const TESTS_DIR = path.join(__dirname, "../tests");
 
 const dryRun = process.argv.includes("--dry-run");
-const langIndex = process.argv.indexOf("--lang");
-const langFilter = langIndex >= 0 ? process.argv[langIndex + 1] : undefined;
-if (langIndex >= 0 && !langFilter) {
-  throw new Error("--lang requires a language argument");
-}
 
 function readLines(relPath: string): { lines: string[]; eol: string } {
   const fullPath = path.join(TESTS_DIR, relPath);
@@ -234,9 +228,6 @@ function readLines(relPath: string): { lines: string[]; eol: string } {
 let errors = 0;
 
 for (const lang of LANGUAGES) {
-  if (langFilter && lang.name !== langFilter) {
-    continue;
-  }
   try {
     const generated = readLines(lang.generatedFile).lines;
     const sourceRange = lang.findSection(generated);

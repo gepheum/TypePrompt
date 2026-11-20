@@ -21,5 +21,5 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext"
   },
-  "include": ["packages/*/src/**/*", "packages/*/dev/**/*"]
+  "include": ["packages/*/src/**/*", "packages/*/dev/**/*", "scripts/**/*"]
 }
