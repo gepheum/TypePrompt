@@ -103,8 +103,13 @@ class Generator {
     const required: string[] = [];
     for (const [fieldName, field] of Object.entries(iface.fields)) {
       required.push(fieldName);
-      const fieldSchema = this.typeToSchema(field.type);
+      let fieldSchema = this.typeToSchema(field.type);
       if (field.doc) {
+        if ("$ref" in fieldSchema) {
+          // OpenAI strict mode rejects keywords next to `$ref`, so wrap the
+          // reference in a single-member `anyOf` to attach the description.
+          fieldSchema = { anyOf: [fieldSchema] };
+        }
         fieldSchema.description = field.doc;
       }
       properties[fieldName] = fieldSchema;

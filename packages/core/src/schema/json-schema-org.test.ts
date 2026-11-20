@@ -229,6 +229,27 @@ describe("toJsonSchema - interface types", () => {
     });
   });
 
+  it("wraps a $ref in anyOf when the field has a description", () => {
+    const schema = gen(
+      [
+        "type Output = {",
+        "  /** Where the person lives. */",
+        "  address: Address;",
+        "};",
+        "type Address = { city: string; };",
+      ].join("\n"),
+    );
+    const properties = schema.properties as Record<string, unknown>;
+    expect(properties.address).toMatch({
+      anyOf: [{ $ref: "#/$defs/Address" }],
+      description: "Where the person lives.",
+    });
+    expect(Object.keys(properties.address as object).sort()).toMatch([
+      "anyOf",
+      "description",
+    ]);
+  });
+
   it("supports nested inline interfaces", () => {
     expect(
       gen("type Output = { address: { street: string; city: string }; };"),
