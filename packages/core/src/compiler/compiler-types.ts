@@ -159,6 +159,14 @@ export type BodyPiece<HasValContext extends boolean = false> =
       readonly indent: string;
       /** The insert tag. */
       readonly tag: Span;
+    }
+  | {
+      readonly kind: "insert-schema";
+      readonly schema: TextSpan;
+      /** Only contains whitespace characters. */
+      readonly indent: string;
+      /** The insert tag. */
+      readonly tag: Span;
     };
 
 export type InsertFormat = "text" | "json" | "yaml" | "toon" | "csv" | "tsv";

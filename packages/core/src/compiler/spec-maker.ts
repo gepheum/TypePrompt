@@ -278,6 +278,9 @@ function makeBody<HasValContext extends boolean>(
         });
         break;
       }
+      case "insert-schema": {
+        break;
+      }
       default: {
         const _: never = piece;
         throw new Error(_);

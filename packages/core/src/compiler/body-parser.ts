@@ -60,6 +60,25 @@ function parseBodyImpl<HasValContext extends boolean>(
 ): Body<HasValContext> {
   const rawPieces: Array<RawBodyPiece<HasValContext>> = [];
 
+  const visitInsertSchema = (insertNode: ElementNode): void => {
+    const attrs = checkKnownXmlAttributes(insertNode, {
+      schema: expectIdentifier({ format: "PascalCase", optional: false }),
+      format: expectOneOf({
+        values: ["typescript"],
+        optional: false,
+      }),
+    });
+    errors.push(...attrs.errors);
+    if (attrs.kind === "error") {
+      return;
+    }
+    rawPieces.push({
+      kind: "insert-schema",
+      schema: attrs.attributes.schema.value,
+      tag: insertNode.tag,
+    });
+  };
+
   const visitInsertSnippet = (insertNode: ElementNode): void => {
     const attrs = checkKnownXmlAttributes(insertNode, {
       snippet: expectIdentifier({ format: "camelCase", optional: false }),
@@ -160,6 +179,8 @@ function parseBodyImpl<HasValContext extends boolean>(
       case "insert": {
         if (child.attributes["snippet"]) {
           visitInsertSnippet(child);
+        } else if (child.attributes["schema"]) {
+          visitInsertSchema(child);
         } else {
           visitInsertValue(child);
         }
@@ -197,6 +218,11 @@ type RawBodyPiece<HasValContext extends boolean, Text = MappedText> =
   | {
       readonly kind: "insert-snippet";
       readonly snippet: TextSpan;
+      readonly tag: Span;
+    }
+  | {
+      readonly kind: "insert-schema";
+      readonly schema: TextSpan;
       readonly tag: Span;
     };
 
@@ -355,6 +381,7 @@ function toBodyPieces<HasValContext extends boolean>(
         updateLastLineState(text);
         break;
       }
+      case "insert-schema":
       case "insert-snippet":
       case "insert-val": {
         if (lastLineState?.allWhitespace) {

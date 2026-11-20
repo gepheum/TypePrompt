@@ -41,6 +41,7 @@ export type KnownAttribute =
   | "switch"
   | "name"
   | "namespace"
+  | "schema"
   | "snippet"
   | "tag"
   | "val";

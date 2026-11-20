@@ -445,6 +445,143 @@ describe("parseBody - <insert snippet='...' />", () => {
 });
 
 // ---------------------------------------------------------------------------
+// parseBody - <insert schema="..." format="..." />
+// ---------------------------------------------------------------------------
+
+describe("parseBody - <insert schema='...' format='...' />", () => {
+  it("parses a valid PascalCase schema name with format='typescript'", () => {
+    expect(
+      testParseBody(
+        '<system><insert schema="Output" format="typescript"/></system>',
+      ),
+    ).toMatch({
+      body: [
+        {
+          kind: "insert-schema",
+          schema: { text: "Output" },
+          format: { text: "typescript" },
+          indent: "",
+        },
+      ],
+      errors: [],
+    });
+  });
+
+  it("tracks indentation for insert schema", () => {
+    const input = [
+      "<system>",
+      "  Schema:",
+      '    Label: <insert schema="Output" format="typescript"/>',
+      "</system>",
+    ].join("\n");
+
+    expect(testParseBody(input)).toMatch({
+      body: [
+        { kind: "text", text: "Schema:\n  Label: " },
+        {
+          kind: "insert-schema",
+          schema: { text: "Output" },
+          format: { text: "typescript" },
+          indent: "  ",
+        },
+      ],
+      errors: [],
+    });
+  });
+
+  it("rejects missing format attribute", () => {
+    expect(testParseBody('<system><insert schema="Output"/></system>')).toMatch(
+      {
+        body: [],
+        errors: [
+          {
+            message: "Missing required attribute 'format'",
+          },
+        ],
+      },
+    );
+  });
+
+  it("rejects invalid format attribute", () => {
+    expect(
+      testParseBody('<system><insert schema="Output" format="json"/></system>'),
+    ).toMatch({
+      body: [],
+      errors: [
+        {
+          message:
+            "Invalid value for attribute 'format': expected one of: 'typescript'",
+        },
+      ],
+    });
+  });
+
+  it("rejects camelCase schema names", () => {
+    expect(
+      testParseBody(
+        '<system><insert schema="output" format="typescript"/></system>',
+      ),
+    ).toMatch({
+      body: [{ kind: "insert-schema" }],
+      errors: [
+        {
+          message:
+            "Invalid value for attribute 'schema': expected a PascalCase identifier",
+        },
+      ],
+    });
+  });
+
+  it("reports unexpected attributes on insert schema", () => {
+    expect(
+      testParseBody(
+        '<system><insert schema="Output" format="typescript" extra="bad"/></system>',
+      ),
+    ).toMatch({
+      body: [{ kind: "insert-schema" }],
+      errors: [
+        {
+          message: "Unexpected attribute 'extra'",
+        },
+      ],
+    });
+  });
+
+  it("rejects both schema and val on insert", () => {
+    expect(
+      testParseBody(
+        '<system><insert schema="Output" format="typescript" val="input.foo"/></system>',
+      ),
+    ).toMatch({
+      body: [{ kind: "insert-schema" }],
+      errors: [
+        {
+          message: "Unexpected attribute 'val'",
+        },
+      ],
+    });
+  });
+
+  it("rejects both schema and snippet on insert", () => {
+    expect(
+      testParseBody(
+        '<system><insert snippet="mySnippet" schema="Output" format="typescript"/></system>',
+      ),
+    ).toMatch({
+      body: [{ kind: "insert-snippet" }],
+      errors: [
+        {
+          message: "Unexpected attribute 'schema'",
+        },
+        {
+          message: "Unexpected attribute 'format'",
+        },
+      ],
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
 // parseBody - indentation tracking for inserts
 // ---------------------------------------------------------------------------
 

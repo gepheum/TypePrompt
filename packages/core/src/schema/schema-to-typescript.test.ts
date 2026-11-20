@@ -575,9 +575,8 @@ describe("schemaToTypeScript", () => {
 
   it("escapes closing comment delimiter inside doc comments", () => {
     const schema = compile("interface Output { value: string; }");
-    (
-      schema.typeDeclarations["Output"] as { doc?: string }
-    ).doc = "Matches */ pattern";
+    (schema.typeDeclarations["Output"] as { doc?: string }).doc =
+      "Matches */ pattern";
     expect(schemaToTypeScript("Output", schema)).toBe(
       lines(
         "/** Matches *\\/ pattern */",
@@ -693,7 +692,9 @@ describe("schemaToTypeScript", () => {
 
   it("renders optional fields with inline interfaces", () => {
     expect(
-      gen("interface Output { config?: { timeout: number; debug: boolean; }; }"),
+      gen(
+        "interface Output { config?: { timeout: number; debug: boolean; }; }",
+      ),
     ).toBe(
       lines(
         "interface Output {",
@@ -767,18 +768,8 @@ describe("schemaToTypeScript", () => {
 
   it("renders doc comments on type aliases", () => {
     expect(
-      gen(
-        [
-          "/** A list of tags. */",
-          "type Output = string[];",
-        ].join("\n"),
-      ),
-    ).toBe(
-      lines(
-        "/** A list of tags. */",
-        "type Output = string[]",
-      ),
-    );
+      gen(["/** A list of tags. */", "type Output = string[];"].join("\n")),
+    ).toBe(lines("/** A list of tags. */", "type Output = string[]"));
   });
 
   it("renders doc comments on fields of discriminated union variants", () => {
