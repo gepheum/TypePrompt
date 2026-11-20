@@ -195,7 +195,7 @@ describe("parseSchema - records", () => {
   it("parses a record type", () => {
     const result = parseSchema(
       textNode("type Response = {[foo: string]: integer};"),
-      "template",
+      "internal",
     );
     expect(result).toMatch({
       kind: "success",
@@ -1022,7 +1022,7 @@ describe("parseSchema - interface keyword", () => {
 
 describe("parseSchema - any type", () => {
   it("parses any as a top-level type alias", () => {
-    const result = parseSchema(textNode("type Payload = any;"), "template");
+    const result = parseSchema(textNode("type Payload = any;"), "internal");
     expect(result).toMatch({
       kind: "success",
       typeDeclarations: {
@@ -1037,7 +1037,7 @@ describe("parseSchema - any type", () => {
   it("parses any as a field type", () => {
     const result = parseSchema(
       textNode("type Response = { data: any; };"),
-      "template",
+      "internal",
     );
     expect(result).toMatch({
       kind: "success",
@@ -1054,7 +1054,7 @@ describe("parseSchema - any type", () => {
   });
 
   it("parses an array of any", () => {
-    const result = parseSchema(textNode("type Items = any[];"), "template");
+    const result = parseSchema(textNode("type Items = any[];"), "internal");
     expect(result).toMatch({
       kind: "success",
       typeDeclarations: {

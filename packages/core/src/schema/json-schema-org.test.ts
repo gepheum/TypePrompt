@@ -15,8 +15,12 @@ function textNode(source: string, path = "schema.ts"): MappedText {
   };
 }
 
-function compile(source: string, path = "schema.ts"): Schema {
-  const parsed = parseSchema(textNode(source, path), "namespace");
+function compile(
+  source: string,
+  path = "schema.ts",
+  context: "namespace" | "internal" = "internal",
+): Schema {
+  const parsed = parseSchema(textNode(source, path), context);
   if (parsed.kind !== "success") {
     throw new Error(
       `Parse failed: ${parsed.errors.map((e) => e.message).join(", ")}`,
@@ -36,7 +40,7 @@ function compileTemplate(
   namespaceSource: string,
   path = "template-schema.ts",
 ): Schema {
-  const ns = compile(namespaceSource);
+  const ns = compile(namespaceSource, "schema.ts", "namespace");
   const parsed = parseSchema(textNode(templateSource, path), "template");
   if (parsed.kind !== "success") {
     throw new Error(

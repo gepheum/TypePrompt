@@ -70,7 +70,7 @@ describe("validateSchema - success", () => {
 
   it("validates a schema containing any", () => {
     const result = validateSchema(
-      parseDeclarations("type Output = any;", "namespace"),
+      parseDeclarations("type Output = any;", "internal"),
       null,
     );
     expect(result).toMatch({ kind: "success" });
@@ -224,7 +224,6 @@ describe("validateSchema - template Output and tool Input restrictions", () => {
       "type Output = number;",
       "type Output = boolean;",
       "type Output = integer;",
-      "type Output = any;",
       "type Output = string[];",
       'type Output = "a" | "b";',
       'type Output = { kind: "a" } | { kind: "b" };',
@@ -269,7 +268,6 @@ describe("validateSchema - template Output and tool Input restrictions", () => {
       "type Input = number;",
       "type Input = boolean;",
       "type Input = integer;",
-      "type Input = any;",
       "type Input = string[];",
       'type Input = "a" | "b";',
       'type Input = { kind: "a" } | { kind: "b" };',
@@ -522,7 +520,7 @@ describe("validateSchema - union type errors", () => {
 
   it("reports an any type as a direct union member", () => {
     const result = validateSchema(
-      parseDeclarations("type Output = any | string;", "namespace"),
+      parseDeclarations("type Output = any | string;", "internal"),
       null,
     );
     expect(result).toMatch({
@@ -1161,7 +1159,7 @@ describe("validateSchema - definition links", () => {
       "type Failure = { ok: false; };",
     ].join("\n");
     const result = validateSchema(
-      parseDeclarations(source, "namespace", "schema.ts"),
+      parseDeclarations(source, "internal", "schema.ts"),
       null,
     );
     if (result.kind !== "success") throw new Error();
@@ -1451,7 +1449,7 @@ describe("validateSchema - definition links", () => {
         data: any;
       };`;
       const result = validateSchema(
-        parseDeclarations(source, "namespace"),
+        parseDeclarations(source, "internal"),
         null,
       );
       const first = source.indexOf("@omitDefault");

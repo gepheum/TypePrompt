@@ -372,7 +372,7 @@ class SchemaParser<Context extends SchemaContext> {
           return type;
         }
         case "{": {
-          if (this.peekToken().text === "[") {
+          if (this.peekToken().text === "[" && this.context === "internal") {
             this.moveNext();
             const keyName = this.peekToken().text;
             if (
@@ -448,11 +448,8 @@ class SchemaParser<Context extends SchemaContext> {
               kind: "primitive",
               primitive: { ...span, text: span.text },
             };
-          } else if (span.text === "any") {
-            return {
-              kind: "any",
-              span: span,
-            };
+          } else if (span.text === "any" && this.context === "internal") {
+            return { kind: "any", span };
           } else if (span.text === "true" || span.text === "false") {
             return {
               kind: "boolean-literal",

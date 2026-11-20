@@ -123,7 +123,7 @@ export const runtimeTypesSchema = ((): Schema => {
       text: SCHEMA,
       offsetMap: [{ textPosition: 0, sourcePosition: 0 }],
     },
-    "namespace",
+    "internal",
   );
   if (parseResult.kind === "error") {
     throw new Error(JSON.stringify(parseResult, undefined, 2));

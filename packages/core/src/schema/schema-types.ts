@@ -5,7 +5,8 @@ import type {
   TextSpan,
 } from "../util/shared-types.js";
 
-export type SchemaContext = "meta" | "namespace" | "template" | "tool";
+export type SchemaContext =
+  "meta" | "namespace" | "template" | "tool" | "internal";
 
 export type SchemaParseResult<Context extends SchemaContext> = {
   readonly kind: "success";

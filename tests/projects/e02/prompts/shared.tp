@@ -26,10 +26,10 @@
   interface Serializable {}
   interface KindAdd {}
   interface AnyHolder {
-    any: any;
+    any: integer;
   }
   interface SerializerHolder {
-    serializer: any;
+    serializer: integer;
   }
   interface Square {
     kind: "square";

@@ -39,7 +39,7 @@ function parseSchemaOrThrow(source: string, path = "schema.ts"): Schema {
     text: source,
     offsetMap: [{ textPosition: 0, sourcePosition: 0 }],
   };
-  const schemaParseResult = parseSchema(textNode, "namespace");
+  const schemaParseResult = parseSchema(textNode, "internal");
   if (schemaParseResult.kind !== "success") {
     throw new Error(
       `Schema parse failed: ${JSON.stringify(schemaParseResult)}`,

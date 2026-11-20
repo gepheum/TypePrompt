@@ -73,10 +73,11 @@ export function validateSchema<Context extends SchemaContext>(
 
   const requiredTypeNames = ((): readonly string[] => {
     switch (schema.context) {
-      case "meta":
-        return ["Meta"];
+      case "internal":
       case "namespace":
         return [];
+      case "meta":
+        return ["Meta"];
       case "template":
       case "tool":
         return ["Input", "Output"];
@@ -130,7 +131,7 @@ export function validateSchema<Context extends SchemaContext>(
 
   // Verify that all types are used.
   let sharedNames: ReadonlySet<string> = new Set();
-  if (schema.context !== "namespace") {
+  if (requiredTypeNames.length >= 1) {
     const allTypesUsedResult = verifyAllTypesUsed(
       requiredTypeNames,
       schemaView,

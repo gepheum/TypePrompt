@@ -26,10 +26,10 @@
   interface Serializable {}
   interface KindAdd {}
   interface AnyHolder {
-    any: any;
+    any: integer;
   }
   interface SerializerHolder {
-    serializer: any;
+    serializer: integer;
   }
   interface Square {
     kind: "square";
@@ -64,7 +64,7 @@
   type DiscriminatorCodingKeys = {};
 
   type CppNameConflicts = {
-    index: any;
+    index: boolean;
     std: boolean;
     this: boolean;
     indirect: boolean;
