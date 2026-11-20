@@ -3203,6 +3203,7 @@ void Test02StructuredOutput_TriageTicket() {
 
   // testJsonOutputFormat
   ASSERT_TRUE(prompt.output_format == typeprompt_02::OutputFormat::kJson);
+  ASSERT_FALSE(prompt.output_has_recursive_type);
   ASSERT_TRUE(prompt.output_json_schema.has_value());
   const auto& schema = *prompt.output_json_schema;
   ASSERT_TRUE(schema.type() == typeprompt_02::JsonNode::Type::kObject);
@@ -3328,6 +3329,9 @@ void Test02ComplexTypes_GeneratePageTree() {
 
   // testJsonOutputFormat
   ASSERT_TRUE(prompt.output_format == typeprompt_02::OutputFormat::kJson);
+
+  // testHasRecursiveType
+  ASSERT_TRUE(prompt.output_has_recursive_type);
 
   // testTemplateId
   ASSERT_EQ(prompt.template_id, "Main:GeneratePageTree");
@@ -3797,6 +3801,7 @@ void Test07Namespaces() {
 
   ASSERT_EQ(prompt_fin_sum.template_id, "Finance:SummarizeTransaction");
   ASSERT_TRUE(prompt_fin_sum.output_format == typeprompt_07::OutputFormat::kJson);
+  ASSERT_FALSE(prompt_fin_sum.output_has_recursive_type);
   ASSERT_TRUE(prompt_fin_sum.user_message.find("AWS monthly bill") != std::string::npos);
 
   // testFinanceDetectAnomaly
@@ -3859,6 +3864,7 @@ void Test07Namespaces() {
 
   ASSERT_EQ(prompt_legal_clause.template_id, "Legal:SummarizeClause");
   ASSERT_TRUE(prompt_legal_clause.output_format == typeprompt_07::OutputFormat::kJson);
+  ASSERT_FALSE(prompt_legal_clause.output_has_recursive_type);
   ASSERT_TRUE(prompt_legal_clause.user_message.find("Alice") != std::string::npos);
   ASSERT_TRUE(prompt_legal_clause.user_message.find("indemnify") != std::string::npos);
   ASSERT_TRUE(prompt_legal_clause.user_message.find("<Clause>") != std::string::npos);
@@ -4077,14 +4083,12 @@ void TestE01_JsonSerialization() {
   // testMatrixWithOmittedOptionalFields
   Matrix matrix = *Matrix::whole{
       .encode = false,
-      .foo = std::nullopt,
       .init = true,
       .ints = {{1, 2, 3}},
       .matrix = std::vector<std::vector<Square>>{},
       .other_matrix = std::nullopt,
   };
   ASSERT_FALSE(matrix.other_matrix.has_value());
-  ASSERT_FALSE(matrix.foo.has_value());
 
   // testComplexTypeSerializationAndDeserialization
   Square sq = *Square::whole{
@@ -4112,13 +4116,11 @@ void TestE01_JsonSerialization() {
       .bool_field = true,
       .enum_field = E::kFooBar,
       .int_field = 42,
-      .map_field = std::map<std::string, std::int32_t>{{"key1", 10}, {"key2", 20}},
       .matrix = std::vector<std::vector<std::int32_t>>{{1, 2}, {3, 4}},
       .num_field = 3.14,
       .opt_bool = false,
       .opt_enum = E::kIf,
       .opt_int = 99,
-      .opt_map = std::map<std::string, std::int32_t>{{"optKey", 30}},
       .opt_matrix = std::vector<std::vector<std::int32_t>>{{5, 6}, {7, 8}},
       .opt_num = 2.718,
       .opt_string = "optional hello",
@@ -4158,8 +4160,6 @@ void TestE01_JsonSerialization() {
   ASSERT_EQ(parsed_full.struct_list[0].size, 20.0);
   ASSERT_EQ(parsed_full.matrix.size(), 2);
   ASSERT_EQ(parsed_full.matrix[0][1], 2);
-  ASSERT_EQ(parsed_full.map_field.at("key1"), 10);
-  ASSERT_EQ(parsed_full.map_field.at("key2"), 20);
 
   ASSERT_TRUE(parsed_full.opt_string.has_value());
   ASSERT_EQ(*parsed_full.opt_string, "optional hello");
@@ -4187,21 +4187,17 @@ void TestE01_JsonSerialization() {
   ASSERT_TRUE(parsed_full.opt_matrix.has_value());
   ASSERT_EQ(parsed_full.opt_matrix->size(), 2);
   ASSERT_EQ((*parsed_full.opt_matrix)[1][0], 7);
-  ASSERT_TRUE(parsed_full.opt_map.has_value());
-  ASSERT_EQ(parsed_full.opt_map->at("optKey"), 30);
 
   // Omitted optional fields
   ComplexType omitted = *ComplexType::whole{
       .bool_field = true,
       .enum_field = E::kFooBar,
       .int_field = 42,
-      .map_field = std::map<std::string, std::int32_t>{{"key1", 10}, {"key2", 20}},
       .matrix = std::vector<std::vector<std::int32_t>>{{1, 2}, {3, 4}},
       .num_field = 3.14,
       .opt_bool = std::nullopt,
       .opt_enum = std::nullopt,
       .opt_int = std::nullopt,
-      .opt_map = std::nullopt,
       .opt_matrix = std::nullopt,
       .opt_num = std::nullopt,
       .opt_string = std::nullopt,
@@ -4231,7 +4227,6 @@ void TestE01_JsonSerialization() {
   ASSERT_TRUE(omitted_json.find("\"optStringList\":null") != std::string::npos);
   ASSERT_TRUE(omitted_json.find("\"optStructList\":null") != std::string::npos);
   ASSERT_TRUE(omitted_json.find("\"optMatrix\":null") != std::string::npos);
-  ASSERT_TRUE(omitted_json.find("\"optMap\":null") != std::string::npos);
 
   auto parsed_omitted_res = typeprompt_e01::ParseJson<ComplexType>(omitted_json);
   ASSERT_TRUE(parsed_omitted_res.ok());
@@ -4248,7 +4243,6 @@ void TestE01_JsonSerialization() {
   ASSERT_FALSE(parsed_omitted.opt_string_list.has_value());
   ASSERT_FALSE(parsed_omitted.opt_struct_list.has_value());
   ASSERT_FALSE(parsed_omitted.opt_matrix.has_value());
-  ASSERT_FALSE(parsed_omitted.opt_map.has_value());
 
   // testOmitDefaultSerializationAndDeserialization
   OmitDefaultType omitted_od = *OmitDefaultType::whole{

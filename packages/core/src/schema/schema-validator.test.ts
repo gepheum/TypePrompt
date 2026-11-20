@@ -97,10 +97,7 @@ describe("validateSchema - success", () => {
 
   it("validates a record type", () => {
     const result = validateSchema(
-      parseDeclarations(
-        "type Output = { [key: string]: number };",
-        "namespace",
-      ),
+      parseDeclarations("type Output = { [key: string]: number };", "internal"),
       null,
     );
     expect(result).toMatch({ kind: "success" });

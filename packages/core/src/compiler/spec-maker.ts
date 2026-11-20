@@ -105,6 +105,7 @@ function makeTemplate(input: ValidTemplate): Spec.Template {
     input;
   const namespace = template.namespace?.text ?? DEFAULT_NAMESPACE;
   const { outputJsonSchema } = makeJsonSchemas(schema);
+  const outputHasRecursiveType = hasRecursiveType(schema, "Output");
   return {
     name: template.name.text,
     namespace,
@@ -123,7 +124,7 @@ function makeTemplate(input: ValidTemplate): Spec.Template {
     }),
     snippets: makeSnippets(template.snippets),
     outputJsonSchema,
-    hasRecursiveType: hasRecursiveType(schema, "Output"),
+    outputHasRecursiveType,
   };
 }
 

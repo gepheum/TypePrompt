@@ -158,18 +158,6 @@ describe("example-maker", () => {
     });
   });
 
-  it("initializes records as empty objects", () => {
-    const schema = parse(`
-      type Input = {
-        tags: { [key: string]: string };
-      };
-    `);
-    const example = makeExampleValue(toSchemaType(schema));
-    expect(example).toMatch({
-      tags: {},
-    });
-  });
-
   it("resolves shared type declarations", () => {
     const schema = parse(
       `

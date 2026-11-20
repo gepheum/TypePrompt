@@ -136,7 +136,19 @@ export type Tool<Input, Output> = {
 export type OutputFormat<Id extends TemplateId> =
   | {
       readonly format: "json";
+      /** Strict JSON schema of the expected output, ready to pass to your LLM SDK. */
       readonly jsonSchema: { readonly [key: string]: unknown };
+      /**
+       * Whether the output type is or contains a recursive type, in which case
+       `jsonSchema` contains recursive references (`$ref`).
+       *
+       * Some LLM providers (namely Anthropic) do not accept recursive types in the
+       * JSON schema of a structured output. If this is `true` and your provider
+       * rejects the schema, a workaround is to ask the SDK for a tool call instead:
+       * define a single tool whose input schema is `jsonSchema`, force the model to
+       * call it, and parse the tool call's input as the output.
+       */
+      readonly hasRecursiveType: boolean;
       /**
        * Zod schema for validating/parsing the LLM output.
        *
@@ -453,6 +465,7 @@ function renderTemplate<Id extends TemplateId>(
           format: "json",
           schema: outputSchema,
           jsonSchema: template.outputJsonSchema as Record<string, unknown>,
+          hasRecursiveType: template.outputHasRecursiveType,
         }
       : { format: "text" }
   ) as OutputFormat<Id>;

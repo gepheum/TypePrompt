@@ -115,11 +115,25 @@ sealed class OutputFormat {
 
 final class JsonOutputFormat extends OutputFormat {
   final String stringifiedJsonSchema;
+
+  /// Strict JSON schema of the expected output, ready to pass to your LLM SDK.
   final UnmodifiableMapView<String, dynamic> jsonSchema;
+
+  /// Whether the output type is or contains a recursive type, in which case
+  /// [jsonSchema] contains recursive references (`$ref`).
+  ///
+  /// Some LLM providers (namely Anthropic) do not accept recursive types in
+  /// the JSON schema of a structured output. If this is `true` and your
+  /// provider rejects the schema, a workaround is to ask the SDK for a tool
+  /// call instead: define a single tool whose input schema is [jsonSchema],
+  /// force the model to call it, and parse the tool call's input as the
+  /// output.
+  final bool hasRecursiveType;
 
   const JsonOutputFormat._({
     required this.stringifiedJsonSchema,
     required this.jsonSchema,
+    required this.hasRecursiveType,
   });
 }
 
@@ -247,6 +261,7 @@ final class _Spec_Templates {
   final String signature;
   final Map<String, _Spec_Template> templates;
   final Map<String, _Spec_Tool> tools;
+
   /// The key is a relative path to a .tp file. The value is the file content.
   final Map<String, String> sourceFiles;
 
@@ -277,9 +292,12 @@ final class _Spec_Templates {
     return _Spec_Templates(
       edition: (json["edition"] as num).toInt(),
       signature: json["signature"],
-      templates: (json["templates"] as Map).map<String, _Spec_Template>((k, v) => MapEntry(k.toString(), _Spec_Template.fromJson(v))),
-      tools: (json["tools"] as Map).map<String, _Spec_Tool>((k, v) => MapEntry(k.toString(), _Spec_Tool.fromJson(v))),
-      sourceFiles: (json["sourceFiles"] as Map).map<String, String>((k, v) => MapEntry(k.toString(), v)),
+      templates: (json["templates"] as Map).map<String, _Spec_Template>(
+          (k, v) => MapEntry(k.toString(), _Spec_Template.fromJson(v))),
+      tools: (json["tools"] as Map).map<String, _Spec_Tool>(
+          (k, v) => MapEntry(k.toString(), _Spec_Tool.fromJson(v))),
+      sourceFiles: (json["sourceFiles"] as Map)
+          .map<String, String>((k, v) => MapEntry(k.toString(), v)),
     );
   }
 }
@@ -292,7 +310,7 @@ final class _Spec_Template {
   final _Spec_TemplateContents contents;
   final Map<String, _Spec_Snippet> snippets;
   final dynamic outputJsonSchema;
-  final bool hasRecursiveType;
+  final bool outputHasRecursiveType;
 
   _Spec_Template({
     required this.name,
@@ -302,7 +320,7 @@ final class _Spec_Template {
     required this.contents,
     required this.snippets,
     required this.outputJsonSchema,
-    required this.hasRecursiveType,
+    required this.outputHasRecursiveType,
   });
 
   Map<String, dynamic> toJson() {
@@ -314,7 +332,7 @@ final class _Spec_Template {
       "contents": contents.toJson(),
       "snippets": snippets.map((k, v) => MapEntry(k, v.toJson())),
       "outputJsonSchema": outputJsonSchema,
-      "hasRecursiveType": hasRecursiveType,
+      "outputHasRecursiveType": outputHasRecursiveType,
     };
   }
 
@@ -328,11 +346,14 @@ final class _Spec_Template {
       name: json["name"],
       namespace: json["namespace"],
       outputFormat: _Spec_OutputFormat.fromJson(json["outputFormat"]),
-      tools: (json["tools"] as List).map<_Spec_TemplateTool>((e) => _Spec_TemplateTool.fromJson(e)).toList(),
+      tools: (json["tools"] as List)
+          .map<_Spec_TemplateTool>((e) => _Spec_TemplateTool.fromJson(e))
+          .toList(),
       contents: _Spec_TemplateContents.fromJson(json["contents"]),
-      snippets: (json["snippets"] as Map).map<String, _Spec_Snippet>((k, v) => MapEntry(k.toString(), _Spec_Snippet.fromJson(v))),
+      snippets: (json["snippets"] as Map).map<String, _Spec_Snippet>(
+          (k, v) => MapEntry(k.toString(), _Spec_Snippet.fromJson(v))),
       outputJsonSchema: json["outputJsonSchema"],
-      hasRecursiveType: json["hasRecursiveType"],
+      outputHasRecursiveType: json["outputHasRecursiveType"],
     );
   }
 }
@@ -340,6 +361,7 @@ final class _Spec_Template {
 enum _Spec_OutputFormat {
   json,
   text;
+
   String toJson() {
     switch (this) {
       case json:
@@ -405,7 +427,8 @@ sealed class _Spec_TemplateContents {
   }
 }
 
-final class _Spec_TemplateContents_KindNoVariants implements _Spec_TemplateContents {
+final class _Spec_TemplateContents_KindNoVariants
+    implements _Spec_TemplateContents {
   final _Spec_TemplateContent content;
 
   _Spec_TemplateContents_KindNoVariants({
@@ -425,14 +448,16 @@ final class _Spec_TemplateContents_KindNoVariants implements _Spec_TemplateConte
     return JsonEncoder.withIndent("  ").convert(toJson());
   }
 
-  factory _Spec_TemplateContents_KindNoVariants.fromJson(Map<String, dynamic> json) {
+  factory _Spec_TemplateContents_KindNoVariants.fromJson(
+      Map<String, dynamic> json) {
     return _Spec_TemplateContents_KindNoVariants(
       content: _Spec_TemplateContent.fromJson(json["content"]),
     );
   }
 }
 
-final class _Spec_TemplateContents_KindVariants implements _Spec_TemplateContents {
+final class _Spec_TemplateContents_KindVariants
+    implements _Spec_TemplateContents {
   final Map<String, _Spec_TemplateContent> variants;
   final _Spec_TemplateContent defaultContent;
 
@@ -455,9 +480,11 @@ final class _Spec_TemplateContents_KindVariants implements _Spec_TemplateContent
     return JsonEncoder.withIndent("  ").convert(toJson());
   }
 
-  factory _Spec_TemplateContents_KindVariants.fromJson(Map<String, dynamic> json) {
+  factory _Spec_TemplateContents_KindVariants.fromJson(
+      Map<String, dynamic> json) {
     return _Spec_TemplateContents_KindVariants(
-      variants: (json["variants"] as Map).map<String, _Spec_TemplateContent>((k, v) => MapEntry(k.toString(), _Spec_TemplateContent.fromJson(v))),
+      variants: (json["variants"] as Map).map<String, _Spec_TemplateContent>(
+          (k, v) => MapEntry(k.toString(), _Spec_TemplateContent.fromJson(v))),
       defaultContent: _Spec_TemplateContent.fromJson(json["defaultContent"]),
     );
   }
@@ -485,7 +512,8 @@ final class _Spec_TemplateContent {
       "meta": meta,
       "system": system == null ? null : system.map((e) => e.toJson()).toList(),
       "user": user == null ? null : user.map((e) => e.toJson()).toList(),
-      "examples": examples == null ? null : examples.map((e) => e.toJson()).toList(),
+      "examples":
+          examples == null ? null : examples.map((e) => e.toJson()).toList(),
     };
   }
 
@@ -497,9 +525,22 @@ final class _Spec_TemplateContent {
   factory _Spec_TemplateContent.fromJson(Map<String, dynamic> json) {
     return _Spec_TemplateContent(
       meta: json["meta"],
-      system: json["system"] == null ? null : (json["system"] as List).map<_Spec_BodyPiece>((e) => _Spec_BodyPiece.fromJson(e)).toList(),
-      user: json["user"] == null ? null : (json["user"] as List).map<_Spec_BodyPiece>((e) => _Spec_BodyPiece.fromJson(e)).toList(),
-      examples: json["examples"] == null ? null : (json["examples"] as List).map<_Spec_FewShotExample>((e) => _Spec_FewShotExample.fromJson(e)).toList(),
+      system: json["system"] == null
+          ? null
+          : (json["system"] as List)
+              .map<_Spec_BodyPiece>((e) => _Spec_BodyPiece.fromJson(e))
+              .toList(),
+      user: json["user"] == null
+          ? null
+          : (json["user"] as List)
+              .map<_Spec_BodyPiece>((e) => _Spec_BodyPiece.fromJson(e))
+              .toList(),
+      examples: json["examples"] == null
+          ? null
+          : (json["examples"] as List)
+              .map<_Spec_FewShotExample>(
+                  (e) => _Spec_FewShotExample.fromJson(e))
+              .toList(),
     );
   }
 }
@@ -532,7 +573,10 @@ final class _Spec_FewShotExample {
     return _Spec_FewShotExample(
       input: json["input"],
       output: json["output"],
-      steps: (json["steps"] as List).map<_Spec_FewShotExample_Steps>((e) => _Spec_FewShotExample_Steps.fromJson(e)).toList(),
+      steps: (json["steps"] as List)
+          .map<_Spec_FewShotExample_Steps>(
+              (e) => _Spec_FewShotExample_Steps.fromJson(e))
+          .toList(),
     );
   }
 }
@@ -557,7 +601,9 @@ final class _Spec_FewShotExample_Steps {
 
   factory _Spec_FewShotExample_Steps.fromJson(Map<String, dynamic> json) {
     return _Spec_FewShotExample_Steps(
-      toolCalls: (json["toolCalls"] as List).map<_Spec_ToolCallExample>((e) => _Spec_ToolCallExample.fromJson(e)).toList(),
+      toolCalls: (json["toolCalls"] as List)
+          .map<_Spec_ToolCallExample>((e) => _Spec_ToolCallExample.fromJson(e))
+          .toList(),
     );
   }
 }
@@ -685,6 +731,7 @@ final class _Spec_BodyPiece_KindInsertVal implements _Spec_BodyPiece {
 final class _Spec_BodyPiece_KindInsertSnippet implements _Spec_BodyPiece {
   /// Snippet name.
   final String snippet;
+
   /// Only contains whitespace characters.
   final String indent;
 
@@ -707,7 +754,8 @@ final class _Spec_BodyPiece_KindInsertSnippet implements _Spec_BodyPiece {
     return JsonEncoder.withIndent("  ").convert(toJson());
   }
 
-  factory _Spec_BodyPiece_KindInsertSnippet.fromJson(Map<String, dynamic> json) {
+  factory _Spec_BodyPiece_KindInsertSnippet.fromJson(
+      Map<String, dynamic> json) {
     return _Spec_BodyPiece_KindInsertSnippet(
       snippet: json["snippet"],
       indent: json["indent"],
@@ -722,6 +770,7 @@ enum _Spec_InsertFormat {
   toon,
   csv,
   tsv;
+
   String toJson() {
     switch (this) {
       case text:
@@ -864,7 +913,9 @@ final class _Spec_Snippet_KindSnippet implements _Spec_Snippet {
 
   factory _Spec_Snippet_KindSnippet.fromJson(Map<String, dynamic> json) {
     return _Spec_Snippet_KindSnippet(
-      body: (json["body"] as List).map<_Spec_BodyPiece>((e) => _Spec_BodyPiece.fromJson(e)).toList(),
+      body: (json["body"] as List)
+          .map<_Spec_BodyPiece>((e) => _Spec_BodyPiece.fromJson(e))
+          .toList(),
     );
   }
 }
@@ -902,8 +953,12 @@ final class _Spec_Snippet_KindSnippetIf implements _Spec_Snippet {
     return _Spec_Snippet_KindSnippetIf(
       expression: _Spec_Expression.fromJson(json["expression"]),
       is_: _Spec_Snippet_KindSnippetIf_Is.fromJson(json["is"]),
-      then: (json["then"] as List).map<_Spec_BodyPiece>((e) => _Spec_BodyPiece.fromJson(e)).toList(),
-      else_: (json["else"] as List).map<_Spec_BodyPiece>((e) => _Spec_BodyPiece.fromJson(e)).toList(),
+      then: (json["then"] as List)
+          .map<_Spec_BodyPiece>((e) => _Spec_BodyPiece.fromJson(e))
+          .toList(),
+      else_: (json["else"] as List)
+          .map<_Spec_BodyPiece>((e) => _Spec_BodyPiece.fromJson(e))
+          .toList(),
     );
   }
 }
@@ -912,6 +967,7 @@ enum _Spec_Snippet_KindSnippetIf_Is {
   notNull,
   notEmpty,
   true_;
+
   String toJson() {
     switch (this) {
       case notNull:
@@ -951,7 +1007,8 @@ final class _Spec_Snippet_KindSnippetSwitch implements _Spec_Snippet {
     return {
       "kind": "snippet-switch",
       "expression": expression.toJson(),
-      "branches": branches.map((k, v) => MapEntry(k, v.map((e) => e.toJson()).toList())),
+      "branches": branches
+          .map((k, v) => MapEntry(k, v.map((e) => e.toJson()).toList())),
     };
   }
 
@@ -963,7 +1020,12 @@ final class _Spec_Snippet_KindSnippetSwitch implements _Spec_Snippet {
   factory _Spec_Snippet_KindSnippetSwitch.fromJson(Map<String, dynamic> json) {
     return _Spec_Snippet_KindSnippetSwitch(
       expression: _Spec_Expression.fromJson(json["expression"]),
-      branches: (json["branches"] as Map).map<String, List<_Spec_BodyPiece>>((k, v) => MapEntry(k.toString(), (v as List).map<_Spec_BodyPiece>((e) => _Spec_BodyPiece.fromJson(e)).toList())),
+      branches: (json["branches"] as Map).map<String, List<_Spec_BodyPiece>>(
+          (k, v) => MapEntry(
+              k.toString(),
+              (v as List)
+                  .map<_Spec_BodyPiece>((e) => _Spec_BodyPiece.fromJson(e))
+                  .toList())),
     );
   }
 }
@@ -1341,6 +1403,7 @@ Prompt<Output, ToolExecutor> _doRender<Output, ToolExecutor>(
       stringifiedJsonSchema: jsonEncode(template.outputJsonSchema),
       jsonSchema:
           UnmodifiableMapView<String, dynamic>(template.outputJsonSchema),
+      hasRecursiveType: template.outputHasRecursiveType,
     );
   } else {
     outputFormat = const TextOutputFormat();

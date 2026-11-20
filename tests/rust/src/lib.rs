@@ -84,6 +84,7 @@ mod tests {
         .as_array()
         .unwrap()
         .contains(&serde_json::json!("urgency")));
+      assert!(!json_fmt.has_recursive_type);
     } else {
       panic!("Expected JsonOutputFormat");
     }
@@ -204,6 +205,10 @@ mod tests {
     );
 
     assert!(prompt.output_format.is_json());
+    assert!(matches!(
+      &prompt.output_format,
+      gen::prompts_02::OutputFormat::Json(f) if f.has_recursive_type
+    ));
     assert_eq!(format!("{}", prompt.template_id), "Main:GeneratePageTree");
     assert_eq!(
       prompt.template_id,
@@ -582,6 +587,10 @@ mod tests {
       "Finance:SummarizeTransaction"
     );
     assert!(fin_summary.output_format.is_json());
+    assert!(matches!(
+      &fin_summary.output_format,
+      gen::prompts_07::OutputFormat::Json(f) if !f.has_recursive_type
+    ));
     assert!(fin_summary.user_message.contains("AWS monthly bill"));
 
     let fin_anomaly = gen::prompts_07::PROMPTS.finance.render_detect_anomaly(
@@ -643,6 +652,10 @@ mod tests {
       "Legal:SummarizeClause"
     );
     assert!(legal_clause.output_format.is_json());
+    assert!(matches!(
+      &legal_clause.output_format,
+      gen::prompts_07::OutputFormat::Json(f) if !f.has_recursive_type
+    ));
     assert!(legal_clause.user_message.contains("Alice"));
     assert!(legal_clause.user_message.contains("indemnify"));
     assert!(legal_clause.user_message.contains("<Clause>"));
@@ -769,7 +782,6 @@ mod tests {
     let matrix = Matrix {
       matrix: vec![],
       other_matrix: None,
-      foo: None,
       ints: vec![1, 2, 3],
       init: true,
       encode: false,
@@ -817,9 +829,6 @@ mod tests {
       string_list: vec!["a".to_string(), "b".to_string()],
       struct_list: vec![sq2.clone()],
       matrix: vec![vec![1, 2], vec![3, 4]],
-      map_field: [("key1".to_string(), 10), ("key2".to_string(), 20)]
-        .into_iter()
-        .collect(),
       opt_string: Some("optional hello".to_string()),
       opt_int: Some(99),
       opt_num: Some(2.718),
@@ -831,7 +840,6 @@ mod tests {
       opt_string_list: Some(vec!["x".to_string(), "y".to_string()]),
       opt_struct_list: Some(vec![sq4]),
       opt_matrix: Some(vec![vec![5, 6], vec![7, 8]]),
-      opt_map: Some([("optKey".to_string(), 30)].into_iter().collect()),
     };
 
     let full_json = serde_json::to_string(&full).unwrap();
@@ -856,9 +864,6 @@ mod tests {
       string_list: vec!["a".to_string(), "b".to_string()],
       struct_list: vec![sq2],
       matrix: vec![vec![1, 2], vec![3, 4]],
-      map_field: [("key1".to_string(), 10), ("key2".to_string(), 20)]
-        .into_iter()
-        .collect(),
       opt_string: None,
       opt_int: None,
       opt_num: None,
@@ -870,7 +875,6 @@ mod tests {
       opt_string_list: None,
       opt_struct_list: None,
       opt_matrix: None,
-      opt_map: None,
     };
 
     let omitted_json = serde_json::to_string(&omitted).unwrap();
@@ -885,7 +889,6 @@ mod tests {
     assert!(omitted_json.contains("\"optStringList\":null"));
     assert!(omitted_json.contains("\"optStructList\":null"));
     assert!(omitted_json.contains("\"optMatrix\":null"));
-    assert!(omitted_json.contains("\"optMap\":null"));
 
     let parsed_omitted: ComplexType = serde_json::from_str(&omitted_json).unwrap();
     assert_eq!(parsed_omitted, omitted);

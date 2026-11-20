@@ -16,8 +16,8 @@ class _internal:
         tools: dict[str, _internal.Tool]
         # The key is a relative path to a .tp file. The value is the file content.
         source_files: dict[str, str] = pydantic.Field(
-            validation_alias=pydantic.AliasChoices('sourceFiles', 'source_files'),
-            serialization_alias='sourceFiles',
+            validation_alias=pydantic.AliasChoices("sourceFiles", "source_files"),
+            serialization_alias="sourceFiles",
         )
 
     class Template(pydantic.BaseModel):
@@ -25,24 +25,28 @@ class _internal:
         name: str
         namespace: str
         output_format: _internal.OutputFormat = pydantic.Field(
-            validation_alias=pydantic.AliasChoices('outputFormat', 'output_format'),
-            serialization_alias='outputFormat',
+            validation_alias=pydantic.AliasChoices("outputFormat", "output_format"),
+            serialization_alias="outputFormat",
         )
         tools: list[_internal.TemplateTool]
         contents: _internal.TemplateContents
         snippets: dict[str, _internal.Snippet]
         output_json_schema: Any = pydantic.Field(
-            validation_alias=pydantic.AliasChoices('outputJsonSchema', 'output_json_schema'),
-            serialization_alias='outputJsonSchema',
+            validation_alias=pydantic.AliasChoices(
+                "outputJsonSchema", "output_json_schema"
+            ),
+            serialization_alias="outputJsonSchema",
         )
-        has_recursive_type: bool = pydantic.Field(
-            validation_alias=pydantic.AliasChoices('hasRecursiveType', 'has_recursive_type'),
-            serialization_alias='hasRecursiveType',
+        output_has_recursive_type: bool = pydantic.Field(
+            validation_alias=pydantic.AliasChoices(
+                "outputHasRecursiveType", "output_has_recursive_type"
+            ),
+            serialization_alias="outputHasRecursiveType",
         )
 
     type OutputFormat = Literal[
-        'json',
-        'text',
+        "json",
+        "text",
     ]
 
     class TemplateTool(pydantic.BaseModel):
@@ -58,16 +62,16 @@ class _internal:
     ]
 
     class TemplateContents_KindNoVariants(pydantic.BaseModel):
-        kind: Literal['no-variants']
+        kind: Literal["no-variants"]
         content: _internal.TemplateContent
 
     class TemplateContents_KindVariants(pydantic.BaseModel):
         model_config = pydantic.ConfigDict(populate_by_name=True)
-        kind: Literal['variants']
+        kind: Literal["variants"]
         variants: dict[str, _internal.TemplateContent]
         default_content: _internal.TemplateContent = pydantic.Field(
-            validation_alias=pydantic.AliasChoices('defaultContent', 'default_content'),
-            serialization_alias='defaultContent',
+            validation_alias=pydantic.AliasChoices("defaultContent", "default_content"),
+            serialization_alias="defaultContent",
         )
 
     class TemplateContent(pydantic.BaseModel):
@@ -84,23 +88,23 @@ class _internal:
     class FewShotExample_Steps(pydantic.BaseModel):
         model_config = pydantic.ConfigDict(populate_by_name=True)
         tool_calls: list[_internal.ToolCallExample] = pydantic.Field(
-            validation_alias=pydantic.AliasChoices('toolCalls', 'tool_calls'),
-            serialization_alias='toolCalls',
+            validation_alias=pydantic.AliasChoices("toolCalls", "tool_calls"),
+            serialization_alias="toolCalls",
         )
 
     class ToolCallExample(pydantic.BaseModel):
         model_config = pydantic.ConfigDict(populate_by_name=True)
         call_id: str = pydantic.Field(
-            validation_alias=pydantic.AliasChoices('callId', 'call_id'),
-            serialization_alias='callId',
+            validation_alias=pydantic.AliasChoices("callId", "call_id"),
+            serialization_alias="callId",
         )
         tool_id: str = pydantic.Field(
-            validation_alias=pydantic.AliasChoices('toolId', 'tool_id'),
-            serialization_alias='toolId',
+            validation_alias=pydantic.AliasChoices("toolId", "tool_id"),
+            serialization_alias="toolId",
         )
         tool_name: str = pydantic.Field(
-            validation_alias=pydantic.AliasChoices('toolName', 'tool_name'),
-            serialization_alias='toolName',
+            validation_alias=pydantic.AliasChoices("toolName", "tool_name"),
+            serialization_alias="toolName",
         )
         input: Any
         output: Any
@@ -115,29 +119,29 @@ class _internal:
     ]
 
     class BodyPiece_KindText(pydantic.BaseModel):
-        kind: Literal['text']
+        kind: Literal["text"]
         text: str
 
     class BodyPiece_KindInsertVal(pydantic.BaseModel):
-        kind: Literal['insert-val']
+        kind: Literal["insert-val"]
         val: _internal.Expression
         format: _internal.InsertFormat
         indent: str
 
     class BodyPiece_KindInsertSnippet(pydantic.BaseModel):
-        kind: Literal['insert-snippet']
+        kind: Literal["insert-snippet"]
         # Snippet name.
         snippet: str
         # Only contains whitespace characters.
         indent: str
 
     type InsertFormat = Literal[
-        'text',
-        'json',
-        'yaml',
-        'toon',
-        'csv',
-        'tsv',
+        "text",
+        "json",
+        "yaml",
+        "toon",
+        "csv",
+        "tsv",
     ]
 
     type Expression = Annotated[
@@ -149,10 +153,10 @@ class _internal:
     ]
 
     class Expression_KindInput(pydantic.BaseModel):
-        kind: Literal['input']
+        kind: Literal["input"]
 
     class Expression_KindProperty(pydantic.BaseModel):
-        kind: Literal['property']
+        kind: Literal["property"]
         left: _internal.Expression
         property: str
 
@@ -166,31 +170,31 @@ class _internal:
     ]
 
     class Snippet_KindSnippet(pydantic.BaseModel):
-        kind: Literal['snippet']
+        kind: Literal["snippet"]
         body: list[_internal.BodyPiece]
 
     class Snippet_KindSnippetIf(pydantic.BaseModel):
         model_config = pydantic.ConfigDict(populate_by_name=True)
-        kind: Literal['snippet-if']
+        kind: Literal["snippet-if"]
         expression: _internal.Expression
         is_: _internal.Snippet_KindSnippetIf_Is = pydantic.Field(
-            validation_alias=pydantic.AliasChoices('is', 'is_'),
-            serialization_alias='is',
+            validation_alias=pydantic.AliasChoices("is", "is_"),
+            serialization_alias="is",
         )
         then: list[_internal.BodyPiece]
         else_: list[_internal.BodyPiece] = pydantic.Field(
-            validation_alias=pydantic.AliasChoices('else', 'else_'),
-            serialization_alias='else',
+            validation_alias=pydantic.AliasChoices("else", "else_"),
+            serialization_alias="else",
         )
 
     type Snippet_KindSnippetIf_Is = Literal[
-        'not-null',
-        'not-empty',
-        'true',
+        "not-null",
+        "not-empty",
+        "true",
     ]
 
     class Snippet_KindSnippetSwitch(pydantic.BaseModel):
-        kind: Literal['snippet-switch']
+        kind: Literal["snippet-switch"]
         expression: _internal.Expression
         branches: dict[str, list[_internal.BodyPiece]]
 
@@ -200,8 +204,10 @@ class _internal:
         name: str
         description: str
         input_json_schema: Any = pydantic.Field(
-            validation_alias=pydantic.AliasChoices('inputJsonSchema', 'input_json_schema'),
-            serialization_alias='inputJsonSchema',
+            validation_alias=pydantic.AliasChoices(
+                "inputJsonSchema", "input_json_schema"
+            ),
+            serialization_alias="inputJsonSchema",
         )
 
 

@@ -45,7 +45,6 @@
     kind: "matrix";
     matrix: Square[][];
     otherMatrix?: Square[][];
-    foo?: { [x: string]: Square[] };
     ints: integer[];
     init: boolean;
     encode: boolean;

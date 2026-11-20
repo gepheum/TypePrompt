@@ -109,6 +109,11 @@ void main() {
       expect((format.jsonSchema['properties'] as Map)['category'], isNotNull);
     });
 
+    test('has no recursive type', () {
+      final format = prompt.outputFormat as p02.JsonOutputFormat;
+      expect(format.hasRecursiveType, isFalse);
+    });
+
     test('c content stripped to plain text', () {
       expect(prompt.systemMessage, contains("urgency"));
       expect(prompt.systemMessage, contains('"critical"'));
@@ -220,6 +225,11 @@ void main() {
 
     test('json output format', () {
       expect(prompt.outputFormat, isA<p02.JsonOutputFormat>());
+    });
+
+    test('has recursive type', () {
+      final format = prompt.outputFormat as p02.JsonOutputFormat;
+      expect(format.hasRecursiveType, isTrue);
     });
 
     test('templateId', () {
@@ -585,6 +595,10 @@ void main() {
         equals("Finance:SummarizeTransaction"),
       );
       expect(prompt.outputFormat, isA<p07.JsonOutputFormat>());
+      expect(
+        (prompt.outputFormat as p07.JsonOutputFormat).hasRecursiveType,
+        isFalse,
+      );
       expect(prompt.userMessage, contains("AWS monthly bill"));
     });
 
@@ -647,6 +661,10 @@ void main() {
 
       expect(prompt.templateId.toString(), equals("Legal:SummarizeClause"));
       expect(prompt.outputFormat, isA<p07.JsonOutputFormat>());
+      expect(
+        (prompt.outputFormat as p07.JsonOutputFormat).hasRecursiveType,
+        isFalse,
+      );
       expect(prompt.userMessage, contains("Alice"));
       expect(prompt.userMessage, contains("indemnify"));
       expect(prompt.userMessage, contains("<Clause>"));
@@ -766,7 +784,6 @@ void main() {
         encode: false,
       );
       expect(matrix.otherMatrix, isNull);
-      expect(matrix.foo, isNull);
     });
 
     test('EnumWithCommonFields serialization & deserialization', () {
@@ -837,7 +854,6 @@ void main() {
           [1, 2],
           [3, 4],
         ],
-        mapField: {"key1": 10, "key2": 20},
         optString: "optional hello",
         optInt: 99,
         optNum: 2.718,
@@ -852,7 +868,6 @@ void main() {
           [5, 6],
           [7, 8],
         ],
-        optMap: {"optKey": 30},
       );
 
       final fullJson = full.toJson();
@@ -878,8 +893,6 @@ void main() {
             [1, 2],
             [3, 4]
           ]));
-      expect(parsedFull.mapField["key1"], equals(10));
-      expect(parsedFull.mapField["key2"], equals(20));
 
       expect(parsedFull.optString, equals("optional hello"));
       expect(parsedFull.optInt, equals(99));
@@ -902,7 +915,6 @@ void main() {
             [5, 6],
             [7, 8]
           ]));
-      expect(parsedFull.optMap?["optKey"], equals(30));
 
       // Omitted optional fields
       final omitted = pe01.Shared_ComplexType(
@@ -920,7 +932,6 @@ void main() {
           [1, 2],
           [3, 4],
         ],
-        mapField: {"key1": 10, "key2": 20},
       );
 
       final omittedJson = omitted.toJson();
@@ -946,8 +957,6 @@ void main() {
       expect(omittedJson["optStructList"], isNull);
       expect(omittedJson.containsKey("optMatrix"), isTrue);
       expect(omittedJson["optMatrix"], isNull);
-      expect(omittedJson.containsKey("optMap"), isTrue);
-      expect(omittedJson["optMap"], isNull);
 
       final parsedOmitted = pe01.Shared_ComplexType.fromJson(omittedJson);
       expect(parsedOmitted.stringField, equals("hello"));
@@ -962,7 +971,6 @@ void main() {
       expect(parsedOmitted.optStringList, isNull);
       expect(parsedOmitted.optStructList, isNull);
       expect(parsedOmitted.optMatrix, isNull);
-      expect(parsedOmitted.optMap, isNull);
     });
 
     test('OmitDefaultType serialization & deserialization', () {

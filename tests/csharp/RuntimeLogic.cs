@@ -114,9 +114,24 @@ public sealed record Prompt<TOutput, TToolExecutor>(
 /// </summary>
 public abstract record OutputFormat;
 
+/// <param name="JsonSchema">
+/// Strict JSON schema of the expected output, ready to pass to your LLM SDK.
+/// </param>
+/// <param name="HasRecursiveType">
+/// Whether the output type is or contains a recursive type, in which case
+/// <paramref name="JsonSchema"/> contains recursive references (<c>$ref</c>).
+/// <para>
+/// Some LLM providers (namely Anthropic) do not accept recursive types in the
+/// JSON schema of a structured output. If this is <c>true</c> and your provider
+/// rejects the schema, a workaround is to ask the SDK for a tool call instead:
+/// define a single tool whose input schema is <paramref name="JsonSchema"/>,
+/// force the model to call it, and parse the tool call's input as the output.
+/// </para>
+/// </param>
 public sealed record JsonOutputFormat(
     string StringifiedJsonSchema,
-    JsonElement JsonSchema
+    JsonElement JsonSchema,
+    bool HasRecursiveType
 ) : OutputFormat;
 
 public sealed record TextOutputFormat : OutputFormat;
@@ -395,7 +410,8 @@ file class SpecRenderer(Spec.Templates spec) : IRenderer
         {
             Spec.OutputFormat.Json => new JsonOutputFormat(
                 template.OutputJsonSchema.GetRawText(),
-                template.OutputJsonSchema
+                template.OutputJsonSchema,
+                template.OutputHasRecursiveType
             ),
             Spec.OutputFormat.Text => new TextOutputFormat(),
             _ => throw new ArgumentOutOfRangeException(nameof(template.OutputFormat)),
@@ -815,8 +831,8 @@ file static class Spec
         public required IReadOnlyDictionary<string, Snippet> Snippets { get; init; }
         [JsonPropertyName("outputJsonSchema")]
         public required JsonElement OutputJsonSchema { get; init; }
-        [JsonPropertyName("hasRecursiveType")]
-        public required bool HasRecursiveType { get; init; }
+        [JsonPropertyName("outputHasRecursiveType")]
+        public required bool OutputHasRecursiveType { get; init; }
     }
 
     [JsonConverter(typeof(JsonStringEnumConverter))]

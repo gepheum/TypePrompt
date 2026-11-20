@@ -2384,12 +2384,12 @@ struct Snippet_KindSnippetSwitch;
 struct Tool;
 
 struct Templates {
-    std::int32_t edition{};
-    std::string signature{};
-    /// The key is a relative path to a .tp file. The value is the file content.
-    std::map<std::string, std::string> source_files{};
-    std::map<std::string, Template> templates{};
-    std::map<std::string, Tool> tools_{};
+  std::int32_t edition{};
+  std::string signature{};
+  /// The key is a relative path to a .tp file. The value is the file content.
+  std::map<std::string, std::string> source_files{};
+  std::map<std::string, Template> templates{};
+  std::map<std::string, Tool> tools_{};
 };
 
 inline JsonNode ToJsonNode(const Templates&);
@@ -2404,15 +2404,15 @@ inline JsonNode ToJsonNode(const OutputFormat_&);
 inline Status ParseValue(const JsonNode&, const JsonPath&, OutputFormat_&);
 
 struct TemplateTool {
-    std::string id{};
-    std::string name{};
+  std::string id{};
+  std::string name{};
 };
 
 inline JsonNode ToJsonNode(const TemplateTool&);
 inline Status ParseValue(const JsonNode&, const JsonPath&, TemplateTool&);
 
 struct BodyPiece_KindText {
-    std::string text{};
+  std::string text{};
 };
 
 inline JsonNode ToJsonNode(const BodyPiece_KindText&);
@@ -2420,10 +2420,8 @@ inline Status ParseValue(const JsonNode&, const JsonPath&, BodyPiece_KindText&);
 
 struct BodyPiece {
  public:
-  using variant_type = std::variant<
-      indirect<BodyPiece_KindText>,
-      indirect<BodyPiece_KindInsertVal>,
-      indirect<BodyPiece_KindInsertSnippet>>;
+  using variant_type = std::variant<indirect<BodyPiece_KindText>, indirect<BodyPiece_KindInsertVal>,
+                                    indirect<BodyPiece_KindInsertSnippet>>;
 
   BodyPiece() : data_(BodyPiece_KindText()) {}
   BodyPiece(variant_type data) : data_(std::move(data)) {}
@@ -2443,9 +2441,7 @@ struct BodyPiece {
     kInsertVal,
     kInsertSnippet,
   };
-  kind kind() const {
-    return static_cast<enum kind>(data_.index());
-  }
+  kind kind() const { return static_cast<enum kind>(data_.index()); }
 
   /// Precondition: kind() == BodyPiece::kind::kText
   const BodyPiece_KindText& as_kind_text() const& { return *std::get<0>(data_); }
@@ -2455,28 +2451,25 @@ struct BodyPiece {
   /// Precondition: kind() == BodyPiece::kind::kInsertVal
   const BodyPiece_KindInsertVal& as_kind_insert_val() const& { return *std::get<1>(data_); }
   BodyPiece_KindInsertVal& as_kind_insert_val() & { return *std::get<1>(data_); }
-  indirect<BodyPiece_KindInsertVal> as_kind_insert_val() && { return std::move(std::get<1>(data_)); }
+  indirect<BodyPiece_KindInsertVal> as_kind_insert_val() && {
+    return std::move(std::get<1>(data_));
+  }
 
   /// Precondition: kind() == BodyPiece::kind::kInsertSnippet
   const BodyPiece_KindInsertSnippet& as_kind_insert_snippet() const& { return *std::get<2>(data_); }
   BodyPiece_KindInsertSnippet& as_kind_insert_snippet() & { return *std::get<2>(data_); }
-  indirect<BodyPiece_KindInsertSnippet> as_kind_insert_snippet() && { return std::move(std::get<2>(data_)); }
+  indirect<BodyPiece_KindInsertSnippet> as_kind_insert_snippet() && {
+    return std::move(std::get<2>(data_));
+  }
 
   template <typename Visitor>
   decltype(auto) visit(Visitor&& visitor) const& {
-    return std::visit(
-        [&visitor](const auto& boxed) -> decltype(auto) {
-          return visitor(*boxed);
-        },
-        data_);
+    return std::visit([&visitor](const auto& boxed) -> decltype(auto) { return visitor(*boxed); },
+                      data_);
   }
   template <typename Visitor>
   decltype(auto) visit(Visitor&& visitor) & {
-    return std::visit(
-        [&visitor](auto& boxed) -> decltype(auto) {
-          return visitor(*boxed);
-        },
-        data_);
+    return std::visit([&visitor](auto& boxed) -> decltype(auto) { return visitor(*boxed); }, data_);
   }
   template <typename Visitor>
   decltype(auto) visit(Visitor&& visitor) && {
@@ -2495,44 +2488,44 @@ inline JsonNode ToJsonNode(const BodyPiece&);
 inline Status ParseValue(const JsonNode&, const JsonPath&, BodyPiece&);
 
 struct ToolCallExample {
-    std::string call_id{};
-    JsonNode input{};
-    JsonNode output{};
-    std::string tool_id{};
-    std::string tool_name{};
+  std::string call_id{};
+  JsonNode input{};
+  JsonNode output{};
+  std::string tool_id{};
+  std::string tool_name{};
 };
 
 inline JsonNode ToJsonNode(const ToolCallExample&);
 inline Status ParseValue(const JsonNode&, const JsonPath&, ToolCallExample&);
 
 struct FewShotExample_Steps {
-    std::vector<ToolCallExample> tool_calls{};
+  std::vector<ToolCallExample> tool_calls{};
 };
 
 inline JsonNode ToJsonNode(const FewShotExample_Steps&);
 inline Status ParseValue(const JsonNode&, const JsonPath&, FewShotExample_Steps&);
 
 struct FewShotExample {
-    JsonNode input{};
-    JsonNode output{};
-    std::vector<FewShotExample_Steps> steps{};
+  JsonNode input{};
+  JsonNode output{};
+  std::vector<FewShotExample_Steps> steps{};
 };
 
 inline JsonNode ToJsonNode(const FewShotExample&);
 inline Status ParseValue(const JsonNode&, const JsonPath&, FewShotExample&);
 
 struct TemplateContent {
-    std::optional<std::vector<FewShotExample>> examples{};
-    std::optional<JsonNode> meta{};
-    std::optional<std::vector<BodyPiece>> system{};
-    std::optional<std::vector<BodyPiece>> user{};
+  std::optional<std::vector<FewShotExample>> examples{};
+  std::optional<JsonNode> meta{};
+  std::optional<std::vector<BodyPiece>> system{};
+  std::optional<std::vector<BodyPiece>> user{};
 };
 
 inline JsonNode ToJsonNode(const TemplateContent&);
 inline Status ParseValue(const JsonNode&, const JsonPath&, TemplateContent&);
 
 struct TemplateContents_KindNoVariants {
-    TemplateContent content{};
+  TemplateContent content{};
 };
 
 inline JsonNode ToJsonNode(const TemplateContents_KindNoVariants&);
@@ -2540,9 +2533,8 @@ inline Status ParseValue(const JsonNode&, const JsonPath&, TemplateContents_Kind
 
 struct TemplateContents {
  public:
-  using variant_type = std::variant<
-      indirect<TemplateContents_KindNoVariants>,
-      indirect<TemplateContents_KindVariants>>;
+  using variant_type = std::variant<indirect<TemplateContents_KindNoVariants>,
+                                    indirect<TemplateContents_KindVariants>>;
 
   TemplateContents() : data_(TemplateContents_KindNoVariants()) {}
   TemplateContents(variant_type data) : data_(std::move(data)) {}
@@ -2561,35 +2553,32 @@ struct TemplateContents {
     kNoVariants,
     kVariants,
   };
-  kind kind() const {
-    return static_cast<enum kind>(data_.index());
-  }
+  kind kind() const { return static_cast<enum kind>(data_.index()); }
 
   /// Precondition: kind() == TemplateContents::kind::kNoVariants
-  const TemplateContents_KindNoVariants& as_kind_no_variants() const& { return *std::get<0>(data_); }
+  const TemplateContents_KindNoVariants& as_kind_no_variants() const& {
+    return *std::get<0>(data_);
+  }
   TemplateContents_KindNoVariants& as_kind_no_variants() & { return *std::get<0>(data_); }
-  indirect<TemplateContents_KindNoVariants> as_kind_no_variants() && { return std::move(std::get<0>(data_)); }
+  indirect<TemplateContents_KindNoVariants> as_kind_no_variants() && {
+    return std::move(std::get<0>(data_));
+  }
 
   /// Precondition: kind() == TemplateContents::kind::kVariants
   const TemplateContents_KindVariants& as_kind_variants() const& { return *std::get<1>(data_); }
   TemplateContents_KindVariants& as_kind_variants() & { return *std::get<1>(data_); }
-  indirect<TemplateContents_KindVariants> as_kind_variants() && { return std::move(std::get<1>(data_)); }
+  indirect<TemplateContents_KindVariants> as_kind_variants() && {
+    return std::move(std::get<1>(data_));
+  }
 
   template <typename Visitor>
   decltype(auto) visit(Visitor&& visitor) const& {
-    return std::visit(
-        [&visitor](const auto& boxed) -> decltype(auto) {
-          return visitor(*boxed);
-        },
-        data_);
+    return std::visit([&visitor](const auto& boxed) -> decltype(auto) { return visitor(*boxed); },
+                      data_);
   }
   template <typename Visitor>
   decltype(auto) visit(Visitor&& visitor) & {
-    return std::visit(
-        [&visitor](auto& boxed) -> decltype(auto) {
-          return visitor(*boxed);
-        },
-        data_);
+    return std::visit([&visitor](auto& boxed) -> decltype(auto) { return visitor(*boxed); }, data_);
   }
   template <typename Visitor>
   decltype(auto) visit(Visitor&& visitor) && {
@@ -2608,22 +2597,22 @@ inline JsonNode ToJsonNode(const TemplateContents&);
 inline Status ParseValue(const JsonNode&, const JsonPath&, TemplateContents&);
 
 struct Template {
-    TemplateContents contents{};
-    bool has_recursive_type{};
-    std::string name{};
-    std::string namespace_{};
-    OutputFormat_ output_format{};
-    JsonNode output_json_schema{};
-    std::map<std::string, Snippet> snippets{};
-    std::vector<TemplateTool> tools_{};
+  TemplateContents contents{};
+  std::string name{};
+  std::string namespace_{};
+  OutputFormat_ output_format{};
+  bool output_has_recursive_type{};
+  JsonNode output_json_schema{};
+  std::map<std::string, Snippet> snippets{};
+  std::vector<TemplateTool> tools_{};
 };
 
 inline JsonNode ToJsonNode(const Template&);
 inline Status ParseValue(const JsonNode&, const JsonPath&, Template&);
 
 struct TemplateContents_KindVariants {
-    TemplateContent default_content{};
-    std::map<std::string, TemplateContent> variants{};
+  TemplateContent default_content{};
+  std::map<std::string, TemplateContent> variants{};
 };
 
 inline JsonNode ToJsonNode(const TemplateContents_KindVariants&);
@@ -2636,9 +2625,8 @@ inline Status ParseValue(const JsonNode&, const JsonPath&, Expression_KindInput&
 
 struct Expression {
  public:
-  using variant_type = std::variant<
-      indirect<Expression_KindInput>,
-      indirect<Expression_KindProperty>>;
+  using variant_type =
+      std::variant<indirect<Expression_KindInput>, indirect<Expression_KindProperty>>;
 
   Expression() : data_(Expression_KindInput()) {}
   Expression(variant_type data) : data_(std::move(data)) {}
@@ -2657,9 +2645,7 @@ struct Expression {
     kInput,
     kProperty,
   };
-  kind kind() const {
-    return static_cast<enum kind>(data_.index());
-  }
+  kind kind() const { return static_cast<enum kind>(data_.index()); }
 
   /// Precondition: kind() == Expression::kind::kInput
   const Expression_KindInput& as_kind_input() const& { return *std::get<0>(data_); }
@@ -2673,19 +2659,12 @@ struct Expression {
 
   template <typename Visitor>
   decltype(auto) visit(Visitor&& visitor) const& {
-    return std::visit(
-        [&visitor](const auto& boxed) -> decltype(auto) {
-          return visitor(*boxed);
-        },
-        data_);
+    return std::visit([&visitor](const auto& boxed) -> decltype(auto) { return visitor(*boxed); },
+                      data_);
   }
   template <typename Visitor>
   decltype(auto) visit(Visitor&& visitor) & {
-    return std::visit(
-        [&visitor](auto& boxed) -> decltype(auto) {
-          return visitor(*boxed);
-        },
-        data_);
+    return std::visit([&visitor](auto& boxed) -> decltype(auto) { return visitor(*boxed); }, data_);
   }
   template <typename Visitor>
   decltype(auto) visit(Visitor&& visitor) && {
@@ -2716,34 +2695,34 @@ inline JsonNode ToJsonNode(const InsertFormat&);
 inline Status ParseValue(const JsonNode&, const JsonPath&, InsertFormat&);
 
 struct BodyPiece_KindInsertVal {
-    InsertFormat format{};
-    std::string indent{};
-    Expression val{};
+  InsertFormat format{};
+  std::string indent{};
+  Expression val{};
 };
 
 inline JsonNode ToJsonNode(const BodyPiece_KindInsertVal&);
 inline Status ParseValue(const JsonNode&, const JsonPath&, BodyPiece_KindInsertVal&);
 
 struct BodyPiece_KindInsertSnippet {
-    /// Only contains whitespace characters.
-    std::string indent{};
-    /// Snippet name.
-    std::string snippet{};
+  /// Only contains whitespace characters.
+  std::string indent{};
+  /// Snippet name.
+  std::string snippet{};
 };
 
 inline JsonNode ToJsonNode(const BodyPiece_KindInsertSnippet&);
 inline Status ParseValue(const JsonNode&, const JsonPath&, BodyPiece_KindInsertSnippet&);
 
 struct Expression_KindProperty {
-    Expression left{};
-    std::string property{};
+  Expression left{};
+  std::string property{};
 };
 
 inline JsonNode ToJsonNode(const Expression_KindProperty&);
 inline Status ParseValue(const JsonNode&, const JsonPath&, Expression_KindProperty&);
 
 struct Snippet_KindSnippet {
-    std::vector<BodyPiece> body{};
+  std::vector<BodyPiece> body{};
 };
 
 inline JsonNode ToJsonNode(const Snippet_KindSnippet&);
@@ -2751,10 +2730,8 @@ inline Status ParseValue(const JsonNode&, const JsonPath&, Snippet_KindSnippet&)
 
 struct Snippet {
  public:
-  using variant_type = std::variant<
-      indirect<Snippet_KindSnippet>,
-      indirect<Snippet_KindSnippetIf>,
-      indirect<Snippet_KindSnippetSwitch>>;
+  using variant_type = std::variant<indirect<Snippet_KindSnippet>, indirect<Snippet_KindSnippetIf>,
+                                    indirect<Snippet_KindSnippetSwitch>>;
 
   Snippet() : data_(Snippet_KindSnippet()) {}
   Snippet(variant_type data) : data_(std::move(data)) {}
@@ -2774,9 +2751,7 @@ struct Snippet {
     kSnippetIf,
     kSnippetSwitch,
   };
-  kind kind() const {
-    return static_cast<enum kind>(data_.index());
-  }
+  kind kind() const { return static_cast<enum kind>(data_.index()); }
 
   /// Precondition: kind() == Snippet::kind::kSnippet
   const Snippet_KindSnippet& as_kind_snippet() const& { return *std::get<0>(data_); }
@@ -2791,23 +2766,18 @@ struct Snippet {
   /// Precondition: kind() == Snippet::kind::kSnippetSwitch
   const Snippet_KindSnippetSwitch& as_kind_snippet_switch() const& { return *std::get<2>(data_); }
   Snippet_KindSnippetSwitch& as_kind_snippet_switch() & { return *std::get<2>(data_); }
-  indirect<Snippet_KindSnippetSwitch> as_kind_snippet_switch() && { return std::move(std::get<2>(data_)); }
+  indirect<Snippet_KindSnippetSwitch> as_kind_snippet_switch() && {
+    return std::move(std::get<2>(data_));
+  }
 
   template <typename Visitor>
   decltype(auto) visit(Visitor&& visitor) const& {
-    return std::visit(
-        [&visitor](const auto& boxed) -> decltype(auto) {
-          return visitor(*boxed);
-        },
-        data_);
+    return std::visit([&visitor](const auto& boxed) -> decltype(auto) { return visitor(*boxed); },
+                      data_);
   }
   template <typename Visitor>
   decltype(auto) visit(Visitor&& visitor) & {
-    return std::visit(
-        [&visitor](auto& boxed) -> decltype(auto) {
-          return visitor(*boxed);
-        },
-        data_);
+    return std::visit([&visitor](auto& boxed) -> decltype(auto) { return visitor(*boxed); }, data_);
   }
   template <typename Visitor>
   decltype(auto) visit(Visitor&& visitor) && {
@@ -2835,28 +2805,28 @@ inline JsonNode ToJsonNode(const Snippet_KindSnippetIf_Is&);
 inline Status ParseValue(const JsonNode&, const JsonPath&, Snippet_KindSnippetIf_Is&);
 
 struct Snippet_KindSnippetIf {
-    std::vector<BodyPiece> else_{};
-    Expression expression{};
-    Snippet_KindSnippetIf_Is is{};
-    std::vector<BodyPiece> then{};
+  std::vector<BodyPiece> else_{};
+  Expression expression{};
+  Snippet_KindSnippetIf_Is is{};
+  std::vector<BodyPiece> then{};
 };
 
 inline JsonNode ToJsonNode(const Snippet_KindSnippetIf&);
 inline Status ParseValue(const JsonNode&, const JsonPath&, Snippet_KindSnippetIf&);
 
 struct Snippet_KindSnippetSwitch {
-    std::map<std::string, std::vector<BodyPiece>> branches{};
-    Expression expression{};
+  std::map<std::string, std::vector<BodyPiece>> branches{};
+  Expression expression{};
 };
 
 inline JsonNode ToJsonNode(const Snippet_KindSnippetSwitch&);
 inline Status ParseValue(const JsonNode&, const JsonPath&, Snippet_KindSnippetSwitch&);
 
 struct Tool {
-    std::string description{};
-    std::string id{};
-    JsonNode input_json_schema{};
-    std::string name{};
+  std::string description{};
+  std::string id{};
+  JsonNode input_json_schema{};
+  std::string name{};
 };
 
 inline JsonNode ToJsonNode(const Tool&);
@@ -2895,17 +2865,17 @@ inline JsonNode ToJsonNode(const Template& input) {
   entries.push_back({"contents", ToJsonNode(input.contents)});
   entries.push_back({"snippets", ToJsonNode(input.snippets)});
   entries.push_back({"outputJsonSchema", ToJsonNode(input.output_json_schema)});
-  entries.push_back({"hasRecursiveType", ToJsonNode(input.has_recursive_type)});
+  entries.push_back({"outputHasRecursiveType", ToJsonNode(input.output_has_recursive_type)});
   return internal::MakeJsonObject(std::move(entries));
 }
 
 inline Status ParseValue(const JsonNode& node, const JsonPath& context, Template& out) {
   internal::StructParser parser(&node, context);
   parser.Parse("contents", out.contents);
-  parser.Parse("hasRecursiveType", out.has_recursive_type);
   parser.Parse("name", out.name);
   parser.Parse("namespace", out.namespace_);
   parser.Parse("outputFormat", out.output_format);
+  parser.Parse("outputHasRecursiveType", out.output_has_recursive_type);
   parser.Parse("outputJsonSchema", out.output_json_schema);
   parser.Parse("snippets", out.snippets);
   parser.Parse("tools", out.tools_);
@@ -2921,9 +2891,7 @@ inline constexpr std::string_view to_string_view(OutputFormat_ input) {
   }
 }
 
-inline JsonNode ToJsonNode(const OutputFormat_& input) {
-  return JsonNode(to_string_view(input));
-}
+inline JsonNode ToJsonNode(const OutputFormat_& input) { return JsonNode(to_string_view(input)); }
 
 inline Status ParseValue(const JsonNode& node, const JsonPath& context, OutputFormat_& out) {
   if (node.type() != JsonNode::Type::kString) {
@@ -2988,7 +2956,8 @@ inline JsonNode ToJsonNode(const TemplateContents_KindNoVariants& input) {
   return internal::MakeJsonObject(std::move(entries));
 }
 
-inline Status ParseValue(const JsonNode& node, const JsonPath& context, TemplateContents_KindNoVariants& out) {
+inline Status ParseValue(const JsonNode& node, const JsonPath& context,
+                         TemplateContents_KindNoVariants& out) {
   internal::StructParser parser(&node, context);
   parser.Parse("content", out.content);
   return std::move(parser).status();
@@ -3004,7 +2973,8 @@ inline JsonNode ToJsonNode(const TemplateContents_KindVariants& input) {
   return internal::MakeJsonObject(std::move(entries));
 }
 
-inline Status ParseValue(const JsonNode& node, const JsonPath& context, TemplateContents_KindVariants& out) {
+inline Status ParseValue(const JsonNode& node, const JsonPath& context,
+                         TemplateContents_KindVariants& out) {
   internal::StructParser parser(&node, context);
   parser.Parse("defaultContent", out.default_content);
   parser.Parse("variants", out.variants);
@@ -3140,7 +3110,8 @@ inline JsonNode ToJsonNode(const BodyPiece_KindInsertVal& input) {
   return internal::MakeJsonObject(std::move(entries));
 }
 
-inline Status ParseValue(const JsonNode& node, const JsonPath& context, BodyPiece_KindInsertVal& out) {
+inline Status ParseValue(const JsonNode& node, const JsonPath& context,
+                         BodyPiece_KindInsertVal& out) {
   internal::StructParser parser(&node, context);
   parser.Parse("format", out.format);
   parser.Parse("indent", out.indent);
@@ -3158,7 +3129,8 @@ inline JsonNode ToJsonNode(const BodyPiece_KindInsertSnippet& input) {
   return internal::MakeJsonObject(std::move(entries));
 }
 
-inline Status ParseValue(const JsonNode& node, const JsonPath& context, BodyPiece_KindInsertSnippet& out) {
+inline Status ParseValue(const JsonNode& node, const JsonPath& context,
+                         BodyPiece_KindInsertSnippet& out) {
   internal::StructParser parser(&node, context);
   parser.Parse("indent", out.indent);
   parser.Parse("snippet", out.snippet);
@@ -3182,9 +3154,7 @@ inline constexpr std::string_view to_string_view(InsertFormat input) {
   }
 }
 
-inline JsonNode ToJsonNode(const InsertFormat& input) {
-  return JsonNode(to_string_view(input));
-}
+inline JsonNode ToJsonNode(const InsertFormat& input) { return JsonNode(to_string_view(input)); }
 
 inline Status ParseValue(const JsonNode& node, const JsonPath& context, InsertFormat& out) {
   if (node.type() != JsonNode::Type::kString) {
@@ -3255,7 +3225,8 @@ inline JsonNode ToJsonNode(const Expression_KindProperty& input) {
   return internal::MakeJsonObject(std::move(entries));
 }
 
-inline Status ParseValue(const JsonNode& node, const JsonPath& context, Expression_KindProperty& out) {
+inline Status ParseValue(const JsonNode& node, const JsonPath& context,
+                         Expression_KindProperty& out) {
   internal::StructParser parser(&node, context);
   parser.Parse("left", out.left);
   parser.Parse("property", out.property);
@@ -3318,7 +3289,8 @@ inline JsonNode ToJsonNode(const Snippet_KindSnippetIf& input) {
   return internal::MakeJsonObject(std::move(entries));
 }
 
-inline Status ParseValue(const JsonNode& node, const JsonPath& context, Snippet_KindSnippetIf& out) {
+inline Status ParseValue(const JsonNode& node, const JsonPath& context,
+                         Snippet_KindSnippetIf& out) {
   internal::StructParser parser(&node, context);
   parser.Parse("else", out.else_);
   parser.Parse("expression", out.expression);
@@ -3342,7 +3314,8 @@ inline JsonNode ToJsonNode(const Snippet_KindSnippetIf_Is& input) {
   return JsonNode(to_string_view(input));
 }
 
-inline Status ParseValue(const JsonNode& node, const JsonPath& context, Snippet_KindSnippetIf_Is& out) {
+inline Status ParseValue(const JsonNode& node, const JsonPath& context,
+                         Snippet_KindSnippetIf_Is& out) {
   if (node.type() != JsonNode::Type::kString) {
     return context.MakeError("Expected string");
   } else if (node.as_string() == "not-null") {
@@ -3367,7 +3340,8 @@ inline JsonNode ToJsonNode(const Snippet_KindSnippetSwitch& input) {
   return internal::MakeJsonObject(std::move(entries));
 }
 
-inline Status ParseValue(const JsonNode& node, const JsonPath& context, Snippet_KindSnippetSwitch& out) {
+inline Status ParseValue(const JsonNode& node, const JsonPath& context,
+                         Snippet_KindSnippetSwitch& out) {
   internal::StructParser parser(&node, context);
   parser.Parse("branches", out.branches);
   parser.Parse("expression", out.expression);
@@ -3447,8 +3421,19 @@ struct Prompt {
 
   /// The expected format of the model output.
   OutputFormat output_format{};
+  /// Strict JSON schema of the expected output, ready to pass to your LLM SDK.
   /// Set if 'output_format' is 'kJson'.
   std::optional<JsonNode> output_json_schema;
+  /// Whether the output type is or contains a recursive type, in which case
+  /// 'output_json_schema' contains recursive references (`$ref`). Always false
+  /// if 'output_format' is 'kText'.
+  ///
+  /// Some LLM providers (namely Anthropic) do not accept recursive types in the
+  /// JSON schema of a structured output. If this is true and your provider
+  /// rejects the schema, a workaround is to ask the SDK for a tool call instead:
+  /// define a single tool whose input schema is 'output_json_schema', force the
+  /// model to call it, and parse the tool call's input as the output.
+  bool output_has_recursive_type = false;
 
   /// Uniquely identifies the prompt template.
   std::string template_id;
@@ -3733,8 +3718,10 @@ class Renderer {
                                      ? OutputFormat::kJson
                                      : OutputFormat::kText;
     std::optional<JsonNode> output_json_schema;
+    bool output_has_recursive_type = false;
     if (output_format == OutputFormat::kJson) {
       output_json_schema = template_val.output_json_schema;
+      output_has_recursive_type = template_val.output_has_recursive_type;
     }
 
     return Prompt{
@@ -3745,6 +3732,7 @@ class Renderer {
         .tools = std::move(tools),
         .output_format = output_format,
         .output_json_schema = std::move(output_json_schema),
+        .output_has_recursive_type = output_has_recursive_type,
         .template_id = std::string(template_id),
     };
   }

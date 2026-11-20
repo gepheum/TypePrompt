@@ -435,22 +435,6 @@ describe("resolveSwitchExpression - non-union types", () => {
       ],
     });
   });
-
-  it("rejects record type with 'Expected: union type'", () => {
-    const schema = parseSchemaOrThrow("type Input = {[k: string]: string}");
-    const expr = makeExpr("input");
-    const inputType = resolveExprTypeOrThrow(expr, schema);
-
-    expect(resolveSwitchExpression(expr, inputType, schema)).toMatch({
-      kind: "error",
-      errors: [
-        {
-          span: expr.fullPath,
-          message: "Expected: union type",
-        },
-      ],
-    });
-  });
 });
 
 // ---------------------------------------------------------------------------

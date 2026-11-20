@@ -133,7 +133,19 @@ sealed class OutputFormat
 
 data class JsonOutputFormat internal constructor(
     val stringifiedJsonSchema: String,
+    /** Strict JSON schema of the expected output, ready to pass to your LLM SDK. */
     val jsonSchema: JsonObject,
+    /**
+     * Whether the output type is or contains a recursive type, in which case
+     * [jsonSchema] contains recursive references (`$ref`).
+     *
+     * Some LLM providers (namely Anthropic) do not accept recursive types in the
+     * JSON schema of a structured output. If this is `true` and your provider
+     * rejects the schema, a workaround is to ask the SDK for a tool call instead:
+     * define a single tool whose input schema is [jsonSchema], force the model to
+     * call it, and parse the tool call's input as the output.
+     */
+    val hasRecursiveType: Boolean,
 ) : OutputFormat()
 
 class TextOutputFormat : OutputFormat()
@@ -239,7 +251,7 @@ internal object Spec {
         val contents: TemplateContents,
         val snippets: Map<String, Snippet>,
         val outputJsonSchema: JsonElement,
-        val hasRecursiveType: Boolean,
+        val outputHasRecursiveType: Boolean,
     )
 
     // Exported as 'Spec.OutputFormat'
@@ -1228,6 +1240,7 @@ private inline fun <reified Input, reified Output, ToolExecutor> doRender(
                             template.outputJsonSchema,
                         ),
                     jsonSchema = template.outputJsonSchema.jsonObject,
+                    hasRecursiveType = template.outputHasRecursiveType,
                 )
             fromJson = { text: String ->
                 Json.decodeFromString<Output>(text)

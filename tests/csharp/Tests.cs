@@ -101,6 +101,13 @@ public class Test02StructuredOutput_TriageTicket
     }
 
     [Fact]
+    public void TestHasNoRecursiveType()
+    {
+        var format = Assert.IsType<TypePrompt02.JsonOutputFormat>(_prompt.OutputFormat);
+        Assert.False(format.HasRecursiveType);
+    }
+
+    [Fact]
     public void TestCContentStrippedToPlainText()
     {
         Assert.Contains("urgency", _prompt.SystemMessage);
@@ -253,6 +260,13 @@ public class Test02ComplexTypes_GeneratePageTree
     public void TestJsonOutputFormat()
     {
         Assert.IsType<TypePrompt02.JsonOutputFormat>(_prompt.OutputFormat);
+    }
+
+    [Fact]
+    public void TestHasRecursiveType()
+    {
+        var format = Assert.IsType<TypePrompt02.JsonOutputFormat>(_prompt.OutputFormat);
+        Assert.True(format.HasRecursiveType);
     }
 
     [Fact]
@@ -724,7 +738,7 @@ public class Test07Namespaces
 
         Assert.Equal("Finance:SummarizeTransaction", TypePrompt07.TemplateIdExtensions.GetId(prompt.TemplateId));
         Assert.NotNull(TypePrompt07.Prompts.Default.Finance);
-        Assert.IsType<TypePrompt07.JsonOutputFormat>(prompt.OutputFormat);
+        Assert.False(Assert.IsType<TypePrompt07.JsonOutputFormat>(prompt.OutputFormat).HasRecursiveType);
         Assert.Contains("AWS monthly bill", prompt.UserMessage);
     }
 
@@ -795,7 +809,7 @@ public class Test07Namespaces
         });
 
         Assert.Equal("Legal:SummarizeClause", TypePrompt07.TemplateIdExtensions.GetId(prompt.TemplateId));
-        Assert.IsType<TypePrompt07.JsonOutputFormat>(prompt.OutputFormat);
+        Assert.False(Assert.IsType<TypePrompt07.JsonOutputFormat>(prompt.OutputFormat).HasRecursiveType);
         Assert.Contains("Alice", prompt.UserMessage);
         Assert.Contains("indemnify", prompt.UserMessage);
         Assert.Contains("<Clause>", prompt.UserMessage);
@@ -1077,7 +1091,6 @@ public class TestE01_JsonSerialization
             Encode = false
         };
         Assert.Null(matrix.OtherMatrix);
-        Assert.Null(matrix.Foo);
     }
 
     [Fact]
@@ -1101,7 +1114,6 @@ public class TestE01_JsonSerialization
             StringList = new[] { "a", "b" },
             StructList = new[] { sq2 },
             Matrix = new[] { new[] { 1, 2 }, new[] { 3, 4 } },
-            MapField = new Dictionary<string, int> { ["key1"] = 10, ["key2"] = 20 },
             OptString = "optional hello",
             OptInt = 99,
             OptNum = 2.718,
@@ -1113,7 +1125,6 @@ public class TestE01_JsonSerialization
             OptStringList = new[] { "x", "y" },
             OptStructList = new[] { sq4 },
             OptMatrix = new[] { new[] { 5, 6 }, new[] { 7, 8 } },
-            OptMap = new Dictionary<string, int> { ["optKey"] = 30 }
         };
 
         var fullJson = JsonSerializer.Serialize(full);
@@ -1134,8 +1145,6 @@ public class TestE01_JsonSerialization
         Assert.Equal(20.0, parsedFull.StructList[0].Size);
         Assert.Equal(2, parsedFull.Matrix.Count);
         Assert.Equal(2, parsedFull.Matrix[0][1]);
-        Assert.Equal(10, parsedFull.MapField["key1"]);
-        Assert.Equal(20, parsedFull.MapField["key2"]);
 
         Assert.Equal("optional hello", parsedFull.OptString);
         Assert.Equal(99, parsedFull.OptInt);
@@ -1154,8 +1163,6 @@ public class TestE01_JsonSerialization
         Assert.Equal(40.0, parsedFull.OptStructList[0].Size);
         Assert.NotNull(parsedFull.OptMatrix);
         Assert.Equal(7, parsedFull.OptMatrix[1][0]);
-        Assert.NotNull(parsedFull.OptMap);
-        Assert.Equal(30, parsedFull.OptMap["optKey"]);
 
         // Omitted optional fields
         var omitted = new TypePrompt.Schema.Shared.ComplexType
@@ -1171,7 +1178,6 @@ public class TestE01_JsonSerialization
             StringList = new[] { "a", "b" },
             StructList = new[] { sq2 },
             Matrix = new[] { new[] { 1, 2 }, new[] { 3, 4 } },
-            MapField = new Dictionary<string, int> { ["key1"] = 10, ["key2"] = 20 }
         };
 
         var omittedJson = JsonSerializer.Serialize(omitted);
@@ -1186,7 +1192,6 @@ public class TestE01_JsonSerialization
         Assert.Contains("\"optStringList\":null", omittedJson);
         Assert.Contains("\"optStructList\":null", omittedJson);
         Assert.Contains("\"optMatrix\":null", omittedJson);
-        Assert.Contains("\"optMap\":null", omittedJson);
 
         var parsedOmitted = JsonSerializer.Deserialize<TypePrompt.Schema.Shared.ComplexType>(omittedJson);
         Assert.NotNull(parsedOmitted);
@@ -1202,7 +1207,6 @@ public class TestE01_JsonSerialization
         Assert.Null(parsedOmitted.OptStringList);
         Assert.Null(parsedOmitted.OptStructList);
         Assert.Null(parsedOmitted.OptMatrix);
-        Assert.Null(parsedOmitted.OptMap);
     }
 
     [Fact]

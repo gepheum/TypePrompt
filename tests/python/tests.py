@@ -206,6 +206,10 @@ class TestTriageTicket:
         assert "category" in schema["required"]
         assert "urgency" in schema["required"]
 
+    def test_has_no_recursive_type(self):
+        assert self.prompt.output_format.format == "json"
+        assert self.prompt.output_format.has_recursive_type is False
+
     def test_c_content_stripped_to_plain_text(self):
         assert "urgency" in self.prompt.system_message
         assert '"critical"' in self.prompt.system_message
@@ -301,6 +305,10 @@ _page_tree_prompt = p02.generate_page_tree.render(
 class TestGeneratePageTree:
     def test_json_output_format(self):
         assert _page_tree_prompt.output_format.format == "json"
+
+    def test_has_recursive_type(self):
+        assert _page_tree_prompt.output_format.format == "json"
+        assert _page_tree_prompt.output_format.has_recursive_type is True
 
     def test_template_id(self):
         assert _page_tree_prompt.template_id == "Main:GeneratePageTree"
@@ -693,6 +701,10 @@ class TestFinanceSummarizeTransaction:
     def test_json_output_format(self):
         assert self.prompt.output_format.format == "json"
 
+    def test_has_no_recursive_type(self):
+        assert self.prompt.output_format.format == "json"
+        assert self.prompt.output_format.has_recursive_type is False
+
     def test_user_message_contains_description(self):
         assert re.search(r"AWS monthly bill", self.prompt.user_message)
 
@@ -776,6 +788,10 @@ class TestLegalSummarizeClause:
     def test_json_output_format(self):
         assert self.prompt.output_format.format == "json"
 
+    def test_has_no_recursive_type(self):
+        assert self.prompt.output_format.format == "json"
+        assert self.prompt.output_format.has_recursive_type is False
+
     def test_user_message_contains_reviewing_party_name(self):
         assert re.search(r"Alice", self.prompt.user_message)
 
@@ -840,7 +856,6 @@ class TestE01JsonSerialization:
             encode=False,
         )
         assert matrix.other_matrix is None
-        assert matrix.foo is None
 
     def test_complex_type_serialization_and_deserialization(self):
         sq = s_e01.shared.Square(
@@ -869,7 +884,6 @@ class TestE01JsonSerialization:
             string_list=["a", "b"],
             struct_list=[sq2],
             matrix=[[1, 2], [3, 4]],
-            map_field={"key1": 10, "key2": 20},
             opt_string="optional hello",
             opt_int=99,
             opt_num=2.718,
@@ -881,7 +895,6 @@ class TestE01JsonSerialization:
             opt_string_list=["x", "y"],
             opt_struct_list=[sq4],
             opt_matrix=[[5, 6], [7, 8]],
-            opt_map={"optKey": 30},
         )
 
         adapter = pydantic.TypeAdapter(s_e01.shared.ComplexType)
@@ -901,8 +914,6 @@ class TestE01JsonSerialization:
         assert len(parsed_full.struct_list) == 1
         assert parsed_full.struct_list[0].size == 20.0
         assert parsed_full.matrix == [[1, 2], [3, 4]]
-        assert parsed_full.map_field["key1"] == 10
-        assert parsed_full.map_field["key2"] == 20
 
         assert parsed_full.opt_string == "optional hello"
         assert parsed_full.opt_int == 99
@@ -919,7 +930,6 @@ class TestE01JsonSerialization:
         assert len(parsed_full.opt_struct_list) == 1
         assert parsed_full.opt_struct_list[0].size == 40.0
         assert parsed_full.opt_matrix == [[5, 6], [7, 8]]
-        assert parsed_full.opt_map == {"optKey": 30}
 
         # Omitted optional fields
         omitted = s_e01.shared.ComplexType(
@@ -935,7 +945,6 @@ class TestE01JsonSerialization:
             string_list=["a", "b"],
             struct_list=[sq2],
             matrix=[[1, 2], [3, 4]],
-            map_field={"key1": 10, "key2": 20},
         )
 
         omitted_json = adapter.dump_json(omitted, by_alias=True).decode("utf-8")
@@ -950,7 +959,6 @@ class TestE01JsonSerialization:
         assert '"optStringList":null' in omitted_json
         assert '"optStructList":null' in omitted_json
         assert '"optMatrix":null' in omitted_json
-        assert '"optMap":null' in omitted_json
 
         parsed_omitted = adapter.validate_json(omitted_json)
         assert parsed_omitted.string_field == "hello"
@@ -965,7 +973,6 @@ class TestE01JsonSerialization:
         assert parsed_omitted.opt_string_list is None
         assert parsed_omitted.opt_struct_list is None
         assert parsed_omitted.opt_matrix is None
-        assert parsed_omitted.opt_map is None
 
     def test_omit_default_serialization_and_deserialization(self):
         adapter = pydantic.TypeAdapter(s_e01.shared.OmitDefaultType)

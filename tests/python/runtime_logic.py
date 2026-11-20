@@ -168,7 +168,17 @@ class Tool[Input, Output]:
 @dataclass(frozen=True)
 class JsonOutputFormat[Output]:
     format: Literal["json"]
+    # Strict JSON schema of the expected output, ready to pass to your LLM SDK.
     json_schema: dict[str, Any]
+    # Whether the output type is or contains a recursive type, in which case
+    # `json_schema` contains recursive references (`$ref`).
+    #
+    # Some LLM providers (namely Anthropic) do not accept recursive types in the
+    # JSON schema of a structured output. If this is `True` and your provider
+    # rejects the schema, a workaround is to ask the SDK for a tool call instead:
+    # define a single tool whose input schema is `json_schema`, force the model to
+    # call it, and parse the tool call's input as the output.
+    has_recursive_type: bool
     # TypeAdapter for validating/parsing the LLM output.
     #
     # When passing a JSON schema to the model (e.g. for structured outputs), use the
@@ -598,6 +608,7 @@ class _TemplateImpl[Input, Output, ToolExecutor]:
                 JsonOutputFormat(
                     format="json",
                     json_schema=cast(dict[str, Any], template.output_json_schema),
+                    has_recursive_type=template.output_has_recursive_type,
                     type_adapter=output_adapter,
                 ),
             )

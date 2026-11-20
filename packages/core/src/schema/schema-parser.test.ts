@@ -214,6 +214,22 @@ describe("parseSchema - records", () => {
       },
     });
   });
+
+  it("rejects a record type outside of the internal context", () => {
+    const result = parseSchema(
+      textNode("type Response = {[foo: string]: integer};"),
+      "namespace",
+    );
+    expect(result).toMatch({
+      kind: "error",
+      errors: [
+        {
+          span: { start: 17, end: 18 },
+          message: "Expected: identifier",
+        },
+      ],
+    });
+  });
 });
 
 // ---------------------------------------------------------------------------

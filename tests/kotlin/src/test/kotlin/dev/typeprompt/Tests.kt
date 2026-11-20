@@ -105,6 +105,12 @@ class Test02StructuredOutput_TriageTicket {
     }
 
     @Test
+    fun testHasNoRecursiveType() {
+        val format = assertIs<com.example.prompts02.JsonOutputFormat>(prompt.outputFormat)
+        assertFalse(format.hasRecursiveType)
+    }
+
+    @Test
     fun testCContentStrippedToPlainText() {
         assertTrue(prompt.systemMessage.contains("urgency"))
         assertTrue(prompt.systemMessage.contains("\"critical\""))
@@ -245,6 +251,12 @@ class Test02_GeneratePageTree {
     @Test
     fun testJsonOutputFormat() {
         assertIs<com.example.prompts02.JsonOutputFormat>(prompt.outputFormat)
+    }
+
+    @Test
+    fun testHasRecursiveType() {
+        val format = assertIs<com.example.prompts02.JsonOutputFormat>(prompt.outputFormat)
+        assertTrue(format.hasRecursiveType)
     }
 
     @Test
@@ -694,6 +706,7 @@ class Test07Namespaces {
         assertEquals("Finance:SummarizeTransaction", prompt.templateId.toString())
         assertNotNull(com.example.prompts07.prompts.finance)
         assertIs<com.example.prompts07.JsonOutputFormat>(prompt.outputFormat)
+        assertFalse((prompt.outputFormat as com.example.prompts07.JsonOutputFormat).hasRecursiveType)
         assertTrue(prompt.userMessage.contains("AWS monthly bill"))
     }
 
@@ -768,6 +781,7 @@ class Test07Namespaces {
 
         assertEquals("Legal:SummarizeClause", prompt.templateId.toString())
         assertIs<com.example.prompts07.JsonOutputFormat>(prompt.outputFormat)
+        assertFalse((prompt.outputFormat as com.example.prompts07.JsonOutputFormat).hasRecursiveType)
         assertTrue(prompt.userMessage.contains("Alice"))
         assertTrue(prompt.userMessage.contains("indemnify"))
         assertTrue(prompt.userMessage.contains("<Clause>"))
@@ -1068,7 +1082,6 @@ class TestE01_JsonSerialization {
                 encode = false,
             )
         assertNull(matrix.otherMatrix)
-        assertNull(matrix.foo)
     }
 
     @Test
@@ -1091,7 +1104,6 @@ class TestE01_JsonSerialization {
                 stringList = listOf("a", "b"),
                 structList = listOf(sq2),
                 matrix = listOf(listOf(1, 2), listOf(3, 4)),
-                mapField = mapOf("key1" to 10, "key2" to 20),
                 optString = "optional hello",
                 optInt = 99,
                 optNum = 2.718,
@@ -1103,7 +1115,6 @@ class TestE01_JsonSerialization {
                 optStringList = listOf("x", "y"),
                 optStructList = listOf(sq4),
                 optMatrix = listOf(listOf(5, 6), listOf(7, 8)),
-                optMap = mapOf("optKey" to 30),
             )
 
         val fullJson = Json.encodeToString(com.example.prompts_e01.Schema.Shared.ComplexType.serializer(), full)
@@ -1123,8 +1134,6 @@ class TestE01_JsonSerialization {
         assertEquals(20.0, parsedFull.structList[0].size)
         assertEquals(2, parsedFull.matrix.size)
         assertEquals(2, parsedFull.matrix[0][1])
-        assertEquals(10, parsedFull.mapField["key1"])
-        assertEquals(20, parsedFull.mapField["key2"])
 
         assertEquals("optional hello", parsedFull.optString)
         assertEquals(99, parsedFull.optInt)
@@ -1142,7 +1151,6 @@ class TestE01_JsonSerialization {
         assertEquals(1, parsedFull.optStructList?.size)
         assertEquals(40.0, parsedFull.optStructList?.get(0)?.size)
         assertEquals(7, parsedFull.optMatrix?.get(1)?.get(0))
-        assertEquals(30, parsedFull.optMap?.get("optKey"))
 
         // Omitted optional fields
         val omitted =
@@ -1158,7 +1166,6 @@ class TestE01_JsonSerialization {
                 stringList = listOf("a", "b"),
                 structList = listOf(sq2),
                 matrix = listOf(listOf(1, 2), listOf(3, 4)),
-                mapField = mapOf("key1" to 10, "key2" to 20),
             )
 
         val omittedJson = Json.encodeToString(com.example.prompts_e01.Schema.Shared.ComplexType.serializer(), omitted)
@@ -1173,7 +1180,6 @@ class TestE01_JsonSerialization {
         assertTrue(omittedJson.contains("\"optStringList\":null"))
         assertTrue(omittedJson.contains("\"optStructList\":null"))
         assertTrue(omittedJson.contains("\"optMatrix\":null"))
-        assertTrue(omittedJson.contains("\"optMap\":null"))
 
         val parsedOmitted =
             Json.decodeFromString(com.example.prompts_e01.Schema.Shared.ComplexType.serializer(), omittedJson)
@@ -1189,7 +1195,6 @@ class TestE01_JsonSerialization {
         assertNull(parsedOmitted.optStringList)
         assertNull(parsedOmitted.optStructList)
         assertNull(parsedOmitted.optMatrix)
-        assertNull(parsedOmitted.optMap)
     }
 
     @Test

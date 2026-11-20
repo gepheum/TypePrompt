@@ -106,6 +106,14 @@ struct StructuredOutputTests {
     }
   }
 
+  @Test func hasNoRecursiveType() {
+    guard case .json(let format) = prompt.outputFormat else {
+      #expect(Bool(false), "Expected JSON output format")
+      return
+    }
+    #expect(!format.hasRecursiveType)
+  }
+
   @Test func cContentStrippedToPlainText() {
     #expect(prompt.systemMessage.contains("urgency"))
     #expect(prompt.systemMessage.contains("\"critical\""))
@@ -215,6 +223,14 @@ struct GeneratePageTreeTests {
 
   @Test func jsonOutputFormat() {
     #expect(prompt.outputFormat.isJson)
+  }
+
+  @Test func hasRecursiveType() {
+    guard case .json(let format) = prompt.outputFormat else {
+      #expect(Bool(false), "Expected JSON output format")
+      return
+    }
+    #expect(format.hasRecursiveType)
   }
 
   @Test func templateId() {
@@ -568,6 +584,9 @@ struct NamespacesTests {
 
     #expect(prompt.templateId.description == "Finance:SummarizeTransaction")
     #expect(prompt.outputFormat.isJson)
+    if case .json(let format) = prompt.outputFormat {
+      #expect(!format.hasRecursiveType)
+    }
     #expect(prompt.userMessage.contains("AWS monthly bill"))
   }
 
@@ -630,6 +649,9 @@ struct NamespacesTests {
 
     #expect(prompt.templateId.description == "Legal:SummarizeClause")
     #expect(prompt.outputFormat.isJson)
+    if case .json(let format) = prompt.outputFormat {
+      #expect(!format.hasRecursiveType)
+    }
     #expect(prompt.userMessage.contains("Alice"))
     #expect(prompt.userMessage.contains("indemnify"))
     #expect(prompt.userMessage.contains("<Clause>"))
@@ -759,7 +781,6 @@ struct E01SpecSerializationTests {
       encode: false
     )
     #expect(matrix.otherMatrix == nil)
-    #expect(matrix.foo == nil)
   }
 
   @Test func enumWithCommonFieldsSerialization() throws {
@@ -836,7 +857,6 @@ struct E01SpecSerializationTests {
       stringList: ["a", "b"],
       structList: [sq2],
       matrix: [[1, 2], [3, 4]],
-      mapField: ["key1": 10, "key2": 20],
       optString: "optional hello",
       optInt: 99,
       optNum: 2.718,
@@ -847,8 +867,7 @@ struct E01SpecSerializationTests {
       optStruct: sq3,
       optStringList: ["x", "y"],
       optStructList: [sq4],
-      optMatrix: [[5, 6], [7, 8]],
-      optMap: ["optKey": 30]
+      optMatrix: [[5, 6], [7, 8]]
     )
 
     let encoder = JSONEncoder()
@@ -873,8 +892,6 @@ struct E01SpecSerializationTests {
     #expect(parsedFull.structList.count == 1)
     #expect(parsedFull.structList[0].size == 20.0)
     #expect(parsedFull.matrix == [[1, 2], [3, 4]])
-    #expect(parsedFull.mapField["key1"] == 10)
-    #expect(parsedFull.mapField["key2"] == 20)
 
     #expect(parsedFull.optString == "optional hello")
     #expect(parsedFull.optInt == 99)
@@ -893,7 +910,6 @@ struct E01SpecSerializationTests {
     #expect(parsedFull.optStructList?.count == 1)
     #expect(parsedFull.optStructList?[0].size == 40.0)
     #expect(parsedFull.optMatrix == [[5, 6], [7, 8]])
-    #expect(parsedFull.optMap?["optKey"] == 30)
 
     // Omitted optional fields
     let omitted = TypePrompt.Schema.Shared.ComplexType(
@@ -907,8 +923,7 @@ struct E01SpecSerializationTests {
       structField: sq,
       stringList: ["a", "b"],
       structList: [sq2],
-      matrix: [[1, 2], [3, 4]],
-      mapField: ["key1": 10, "key2": 20]
+      matrix: [[1, 2], [3, 4]]
     )
 
     let omittedData = try encoder.encode(omitted)
@@ -924,7 +939,6 @@ struct E01SpecSerializationTests {
     #expect(omittedJson.contains("\"optStringList\":null"))
     #expect(omittedJson.contains("\"optStructList\":null"))
     #expect(omittedJson.contains("\"optMatrix\":null"))
-    #expect(omittedJson.contains("\"optMap\":null"))
 
     let parsedOmitted = try decoder.decode(
       TypePrompt.Schema.Shared.ComplexType.self, from: omittedData)
@@ -940,7 +954,6 @@ struct E01SpecSerializationTests {
     #expect(parsedOmitted.optStringList == nil)
     #expect(parsedOmitted.optStructList == nil)
     #expect(parsedOmitted.optMatrix == nil)
-    #expect(parsedOmitted.optMap == nil)
   }
 
   @Test func omitDefaultSerializationAndDeserialization() throws {

@@ -232,20 +232,23 @@ class SchemaParser<Context extends SchemaContext> {
   private parseFields(): readonly Field[] {
     const result: Field[] = [];
     while (true) {
+      const token = this.peekToken();
+      if (token.text === "}" || token.kind === "string-end") {
+        break;
+      }
       const field = this.tryParseField();
-      if (field !== null) {
-        result.push(field);
-      } else {
+      if (field === null) {
         // Error. Move to the next '}'
-        let token: Token;
+        let next: Token;
         while (
-          (token = this.peekToken()).kind !== "string-end" &&
-          token.text !== "}"
+          (next = this.peekToken()).kind !== "string-end" &&
+          next.text !== "}"
         ) {
           this.moveNext();
         }
         break;
       }
+      result.push(field);
     }
     return result;
   }
@@ -287,13 +290,10 @@ class SchemaParser<Context extends SchemaContext> {
 
     const name = this.peekToken();
     if (name.kind !== "identifier") {
-      if (jsdoc || omitDefault) {
-        // jsdoc or directive was attached to nothing — report the error.
-        this.parserErrors.push({
-          span: this.tokenToSpan(name),
-          message: "Expected: identifier",
-        });
-      }
+      this.parserErrors.push({
+        span: this.tokenToSpan(name),
+        message: "Expected: identifier",
+      });
       return null;
     }
     const doc = getDocText(jsdoc);

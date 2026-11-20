@@ -87,6 +87,13 @@ describe("02-complex-types / TriageTicket", () => {
     recentTickets: [],
   });
 
+  it("has no recursive type in its output", () => {
+    expect(prompt.outputFormat).toMatch({
+      format: "json",
+      hasRecursiveType: false,
+    });
+  });
+
   it("has json output format", () => {
     expect(prompt.outputFormat).toMatch({ format: "json" });
     if (prompt.outputFormat.format === "json") {
@@ -211,6 +218,13 @@ describe("02-complex-types / GeneratePageTree", () => {
 
   it("has json output format", () => {
     expect(prompt.outputFormat).toMatch({ format: "json" });
+  });
+
+  it("has a recursive type in its output", () => {
+    expect(prompt.outputFormat).toMatch({
+      format: "json",
+      hasRecursiveType: true,
+    });
   });
 
   it("templateId is Main:GeneratePageTree", () => {
@@ -652,6 +666,13 @@ describe("07-namespaces", () => {
       expect(prompt.outputFormat).toMatch({ format: "json" });
     });
 
+    it("has no recursive type in its output", () => {
+      expect(prompt.outputFormat).toMatch({
+        format: "json",
+        hasRecursiveType: false,
+      });
+    });
+
     it("userMessage contains the transaction description", () => {
       expect(prompt.userMessage).toMatch(/AWS monthly bill/);
     });
@@ -730,6 +751,13 @@ describe("07-namespaces", () => {
 
     it("has json output format", () => {
       expect(prompt.outputFormat).toMatch({ format: "json" });
+    });
+
+    it("has no recursive type in its output", () => {
+      expect(prompt.outputFormat).toMatch({
+        format: "json",
+        hasRecursiveType: false,
+      });
     });
 
     it("userMessage contains the reviewing party name", () => {
@@ -961,7 +989,6 @@ describe("e01 / JSON serialization & deserialization", () => {
       encode: false,
     };
     expect(matrix.otherMatrix).toMatch(undefined);
-    expect(matrix.foo).toMatch(undefined);
   });
 
   it("serializes and deserializes ComplexType with all types and optional fields", () => {
@@ -1010,7 +1037,6 @@ describe("e01 / JSON serialization & deserialization", () => {
         [1, 2],
         [3, 4],
       ],
-      mapField: { key1: 10, key2: 20 },
       optString: "optional hello",
       optInt: 99,
       optNum: 2.718,
@@ -1025,7 +1051,6 @@ describe("e01 / JSON serialization & deserialization", () => {
         [5, 6],
         [7, 8],
       ],
-      optMap: { optKey: 30 },
     };
 
     const fullJson = JSON.stringify(full);
@@ -1049,7 +1074,6 @@ describe("e01 / JSON serialization & deserialization", () => {
         [1, 2],
         [3, 4],
       ],
-      mapField: { key1: 10, key2: 20 },
       optString: null,
       optInt: null,
       optNum: null,
@@ -1061,7 +1085,6 @@ describe("e01 / JSON serialization & deserialization", () => {
       optStringList: null,
       optStructList: null,
       optMatrix: null,
-      optMap: null,
     };
 
     const omittedJson = JSON.stringify(omitted);
@@ -1076,7 +1099,6 @@ describe("e01 / JSON serialization & deserialization", () => {
     expect(omittedJson.includes('"optStringList":null')).toMatch(true);
     expect(omittedJson.includes('"optStructList":null')).toMatch(true);
     expect(omittedJson.includes('"optMatrix":null')).toMatch(true);
-    expect(omittedJson.includes('"optMap":null')).toMatch(true);
 
     const parsedOmitted: SchemaE01.Shared.ComplexType = JSON.parse(omittedJson);
     expect(parsedOmitted).toMatch(omitted);
@@ -1091,7 +1113,6 @@ describe("e01 / JSON serialization & deserialization", () => {
     expect(parsedOmitted.optStringList).toMatch(null);
     expect(parsedOmitted.optStructList).toMatch(null);
     expect(parsedOmitted.optMatrix).toMatch(null);
-    expect(parsedOmitted.optMap).toMatch(null);
   });
 
   it("serializes and deserializes OmitDefaultType with omitted and non-default values", () => {

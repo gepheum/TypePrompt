@@ -157,7 +157,17 @@ impl OutputFormat {
 pub struct JsonOutputFormat {
   /// The JSON schema against which model outputs are validated.
   pub stringified_json_schema: String,
+  /// Strict JSON schema of the expected output, ready to pass to your LLM SDK.
   pub json_schema: serde_json::Value,
+  /// Whether the output type is or contains a recursive type, in which case
+  /// `json_schema` contains recursive references (`$ref`).
+  ///
+  /// Some LLM providers (namely Anthropic) do not accept recursive types in the
+  /// JSON schema of a structured output. If this is `true` and your provider
+  /// rejects the schema, a workaround is to ask the SDK for a tool call instead:
+  /// define a single tool whose input schema is `json_schema`, force the model to
+  /// call it, and parse the tool call's input as the output.
+  pub has_recursive_type: bool,
 }
 
 /// Free-form text output format specification.
@@ -677,6 +687,7 @@ fn do_render<Input: serde::Serialize, Output, ToolExecutor: ?Sized>(
       OutputFormat::Json(JsonOutputFormat {
         stringified_json_schema: schema_str,
         json_schema: template.output_json_schema.clone(),
+        has_recursive_type: template.output_has_recursive_type,
       })
     }
     spec::OutputFormat::Text => OutputFormat::Text(TextOutputFormat),
@@ -763,8 +774,8 @@ mod spec {
     pub(super) snippets: std::collections::HashMap<String, Snippet>,
     #[serde(rename = "outputJsonSchema")]
     pub(super) output_json_schema: serde_json::Value,
-    #[serde(rename = "hasRecursiveType")]
-    pub(super) has_recursive_type: bool,
+    #[serde(rename = "outputHasRecursiveType")]
+    pub(super) output_has_recursive_type: bool,
   }
 
   #[derive(Clone, serde::Serialize, serde::Deserialize, Debug, PartialEq)]
@@ -803,7 +814,10 @@ mod spec {
   }
 
   impl serde::Serialize for TemplateContents {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S : serde::Serializer {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+      S: serde::Serializer,
+    {
       match self {
         TemplateContents::KindNoVariants(v) => serde::Serialize::serialize(v, serializer),
         TemplateContents::KindVariants(v) => serde::Serialize::serialize(v, serializer),
@@ -812,21 +826,30 @@ mod spec {
   }
 
   impl<'de> serde::Deserialize<'de> for TemplateContents {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D : serde::Deserializer<'de> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+      D: serde::Deserializer<'de>,
+    {
       let value = serde_json::Value::deserialize(deserializer)?;
-      let discriminant = value.get("kind")
+      let discriminant = value
+        .get("kind")
         .and_then(serde_json::Value::as_str)
         .ok_or_else(|| serde::de::Error::missing_field("kind"))?;
       match discriminant {
         "no-variants" => {
-          let v = <TemplateContents_KindNoVariants>::deserialize(value).map_err(serde::de::Error::custom)?;
+          let v = <TemplateContents_KindNoVariants>::deserialize(value)
+            .map_err(serde::de::Error::custom)?;
           Ok(TemplateContents::KindNoVariants(v))
         }
         "variants" => {
-          let v = <TemplateContents_KindVariants>::deserialize(value).map_err(serde::de::Error::custom)?;
+          let v = <TemplateContents_KindVariants>::deserialize(value)
+            .map_err(serde::de::Error::custom)?;
           Ok(TemplateContents::KindVariants(v))
         }
-        other => Err(serde::de::Error::unknown_variant(other, &["no-variants", "variants"])),
+        other => Err(serde::de::Error::unknown_variant(
+          other,
+          &["no-variants", "variants"],
+        )),
       }
     }
   }
@@ -837,8 +860,12 @@ mod spec {
   }
 
   impl serde::Serialize for TemplateContents_KindNoVariants {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer {
-      let mut state = serde::Serializer::serialize_struct(serializer, "TemplateContents_KindNoVariants", 2)?;
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+      S: serde::Serializer,
+    {
+      let mut state =
+        serde::Serializer::serialize_struct(serializer, "TemplateContents_KindNoVariants", 2)?;
       serde::ser::SerializeStruct::serialize_field(&mut state, "kind", &"no-variants")?;
       serde::ser::SerializeStruct::serialize_field(&mut state, "content", &self.content)?;
       serde::ser::SerializeStruct::end(state)
@@ -853,11 +880,19 @@ mod spec {
   }
 
   impl serde::Serialize for TemplateContents_KindVariants {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer {
-      let mut state = serde::Serializer::serialize_struct(serializer, "TemplateContents_KindVariants", 3)?;
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+      S: serde::Serializer,
+    {
+      let mut state =
+        serde::Serializer::serialize_struct(serializer, "TemplateContents_KindVariants", 3)?;
       serde::ser::SerializeStruct::serialize_field(&mut state, "kind", &"variants")?;
       serde::ser::SerializeStruct::serialize_field(&mut state, "variants", &self.variants)?;
-      serde::ser::SerializeStruct::serialize_field(&mut state, "defaultContent", &self.default_content)?;
+      serde::ser::SerializeStruct::serialize_field(
+        &mut state,
+        "defaultContent",
+        &self.default_content,
+      )?;
       serde::ser::SerializeStruct::end(state)
     }
   }
@@ -907,7 +942,10 @@ mod spec {
   }
 
   impl serde::Serialize for BodyPiece {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S : serde::Serializer {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+      S: serde::Serializer,
+    {
       match self {
         BodyPiece::KindText(v) => serde::Serialize::serialize(v, serializer),
         BodyPiece::KindInsertVal(v) => serde::Serialize::serialize(v, serializer),
@@ -917,9 +955,13 @@ mod spec {
   }
 
   impl<'de> serde::Deserialize<'de> for BodyPiece {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D : serde::Deserializer<'de> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+      D: serde::Deserializer<'de>,
+    {
       let value = serde_json::Value::deserialize(deserializer)?;
-      let discriminant = value.get("kind")
+      let discriminant = value
+        .get("kind")
         .and_then(serde_json::Value::as_str)
         .ok_or_else(|| serde::de::Error::missing_field("kind"))?;
       match discriminant {
@@ -928,14 +970,19 @@ mod spec {
           Ok(BodyPiece::KindText(v))
         }
         "insert-val" => {
-          let v = <BodyPiece_KindInsertVal>::deserialize(value).map_err(serde::de::Error::custom)?;
+          let v =
+            <BodyPiece_KindInsertVal>::deserialize(value).map_err(serde::de::Error::custom)?;
           Ok(BodyPiece::KindInsertVal(v))
         }
         "insert-snippet" => {
-          let v = <BodyPiece_KindInsertSnippet>::deserialize(value).map_err(serde::de::Error::custom)?;
+          let v =
+            <BodyPiece_KindInsertSnippet>::deserialize(value).map_err(serde::de::Error::custom)?;
           Ok(BodyPiece::KindInsertSnippet(v))
         }
-        other => Err(serde::de::Error::unknown_variant(other, &["text", "insert-val", "insert-snippet"])),
+        other => Err(serde::de::Error::unknown_variant(
+          other,
+          &["text", "insert-val", "insert-snippet"],
+        )),
       }
     }
   }
@@ -946,7 +993,10 @@ mod spec {
   }
 
   impl serde::Serialize for BodyPiece_KindText {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+      S: serde::Serializer,
+    {
       let mut state = serde::Serializer::serialize_struct(serializer, "BodyPiece_KindText", 2)?;
       serde::ser::SerializeStruct::serialize_field(&mut state, "kind", &"text")?;
       serde::ser::SerializeStruct::serialize_field(&mut state, "text", &self.text)?;
@@ -962,8 +1012,12 @@ mod spec {
   }
 
   impl serde::Serialize for BodyPiece_KindInsertVal {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer {
-      let mut state = serde::Serializer::serialize_struct(serializer, "BodyPiece_KindInsertVal", 4)?;
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+      S: serde::Serializer,
+    {
+      let mut state =
+        serde::Serializer::serialize_struct(serializer, "BodyPiece_KindInsertVal", 4)?;
       serde::ser::SerializeStruct::serialize_field(&mut state, "kind", &"insert-val")?;
       serde::ser::SerializeStruct::serialize_field(&mut state, "val", &self.val)?;
       serde::ser::SerializeStruct::serialize_field(&mut state, "format", &self.format)?;
@@ -981,8 +1035,12 @@ mod spec {
   }
 
   impl serde::Serialize for BodyPiece_KindInsertSnippet {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer {
-      let mut state = serde::Serializer::serialize_struct(serializer, "BodyPiece_KindInsertSnippet", 3)?;
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+      S: serde::Serializer,
+    {
+      let mut state =
+        serde::Serializer::serialize_struct(serializer, "BodyPiece_KindInsertSnippet", 3)?;
       serde::ser::SerializeStruct::serialize_field(&mut state, "kind", &"insert-snippet")?;
       serde::ser::SerializeStruct::serialize_field(&mut state, "snippet", &self.snippet)?;
       serde::ser::SerializeStruct::serialize_field(&mut state, "indent", &self.indent)?;
@@ -1032,7 +1090,10 @@ mod spec {
   }
 
   impl serde::Serialize for Expression {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S : serde::Serializer {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+      S: serde::Serializer,
+    {
       match self {
         Expression::KindInput(v) => serde::Serialize::serialize(v, serializer),
         Expression::KindProperty(v) => serde::Serialize::serialize(v, serializer),
@@ -1041,9 +1102,13 @@ mod spec {
   }
 
   impl<'de> serde::Deserialize<'de> for Expression {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D : serde::Deserializer<'de> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+      D: serde::Deserializer<'de>,
+    {
       let value = serde_json::Value::deserialize(deserializer)?;
-      let discriminant = value.get("kind")
+      let discriminant = value
+        .get("kind")
         .and_then(serde_json::Value::as_str)
         .ok_or_else(|| serde::de::Error::missing_field("kind"))?;
       match discriminant {
@@ -1052,10 +1117,14 @@ mod spec {
           Ok(Expression::KindInput(v))
         }
         "property" => {
-          let v = <Box<Expression_KindProperty>>::deserialize(value).map_err(serde::de::Error::custom)?;
+          let v =
+            <Box<Expression_KindProperty>>::deserialize(value).map_err(serde::de::Error::custom)?;
           Ok(Expression::KindProperty(v))
         }
-        other => Err(serde::de::Error::unknown_variant(other, &["input", "property"])),
+        other => Err(serde::de::Error::unknown_variant(
+          other,
+          &["input", "property"],
+        )),
       }
     }
   }
@@ -1064,7 +1133,10 @@ mod spec {
   pub(super) struct Expression_KindInput {}
 
   impl serde::Serialize for Expression_KindInput {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+      S: serde::Serializer,
+    {
       let mut state = serde::Serializer::serialize_struct(serializer, "Expression_KindInput", 1)?;
       serde::ser::SerializeStruct::serialize_field(&mut state, "kind", &"input")?;
       serde::ser::SerializeStruct::end(state)
@@ -1078,8 +1150,12 @@ mod spec {
   }
 
   impl serde::Serialize for Expression_KindProperty {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer {
-      let mut state = serde::Serializer::serialize_struct(serializer, "Expression_KindProperty", 3)?;
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+      S: serde::Serializer,
+    {
+      let mut state =
+        serde::Serializer::serialize_struct(serializer, "Expression_KindProperty", 3)?;
       serde::ser::SerializeStruct::serialize_field(&mut state, "kind", &"property")?;
       serde::ser::SerializeStruct::serialize_field(&mut state, "left", &self.left)?;
       serde::ser::SerializeStruct::serialize_field(&mut state, "property", &self.property)?;
@@ -1095,7 +1171,10 @@ mod spec {
   }
 
   impl serde::Serialize for Snippet {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S : serde::Serializer {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+      S: serde::Serializer,
+    {
       match self {
         Snippet::KindSnippet(v) => serde::Serialize::serialize(v, serializer),
         Snippet::KindSnippetIf(v) => serde::Serialize::serialize(v, serializer),
@@ -1105,9 +1184,13 @@ mod spec {
   }
 
   impl<'de> serde::Deserialize<'de> for Snippet {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D : serde::Deserializer<'de> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+      D: serde::Deserializer<'de>,
+    {
       let value = serde_json::Value::deserialize(deserializer)?;
-      let discriminant = value.get("kind")
+      let discriminant = value
+        .get("kind")
         .and_then(serde_json::Value::as_str)
         .ok_or_else(|| serde::de::Error::missing_field("kind"))?;
       match discriminant {
@@ -1120,10 +1203,14 @@ mod spec {
           Ok(Snippet::KindSnippetIf(v))
         }
         "snippet-switch" => {
-          let v = <Snippet_KindSnippetSwitch>::deserialize(value).map_err(serde::de::Error::custom)?;
+          let v =
+            <Snippet_KindSnippetSwitch>::deserialize(value).map_err(serde::de::Error::custom)?;
           Ok(Snippet::KindSnippetSwitch(v))
         }
-        other => Err(serde::de::Error::unknown_variant(other, &["snippet", "snippet-if", "snippet-switch"])),
+        other => Err(serde::de::Error::unknown_variant(
+          other,
+          &["snippet", "snippet-if", "snippet-switch"],
+        )),
       }
     }
   }
@@ -1134,7 +1221,10 @@ mod spec {
   }
 
   impl serde::Serialize for Snippet_KindSnippet {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+      S: serde::Serializer,
+    {
       let mut state = serde::Serializer::serialize_struct(serializer, "Snippet_KindSnippet", 2)?;
       serde::ser::SerializeStruct::serialize_field(&mut state, "kind", &"snippet")?;
       serde::ser::SerializeStruct::serialize_field(&mut state, "body", &self.body)?;
@@ -1152,7 +1242,10 @@ mod spec {
   }
 
   impl serde::Serialize for Snippet_KindSnippetIf {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+      S: serde::Serializer,
+    {
       let mut state = serde::Serializer::serialize_struct(serializer, "Snippet_KindSnippetIf", 5)?;
       serde::ser::SerializeStruct::serialize_field(&mut state, "kind", &"snippet-if")?;
       serde::ser::SerializeStruct::serialize_field(&mut state, "expression", &self.expression)?;
@@ -1196,8 +1289,12 @@ mod spec {
   }
 
   impl serde::Serialize for Snippet_KindSnippetSwitch {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer {
-      let mut state = serde::Serializer::serialize_struct(serializer, "Snippet_KindSnippetSwitch", 3)?;
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+      S: serde::Serializer,
+    {
+      let mut state =
+        serde::Serializer::serialize_struct(serializer, "Snippet_KindSnippetSwitch", 3)?;
       serde::ser::SerializeStruct::serialize_field(&mut state, "kind", &"snippet-switch")?;
       serde::ser::SerializeStruct::serialize_field(&mut state, "expression", &self.expression)?;
       serde::ser::SerializeStruct::serialize_field(&mut state, "branches", &self.branches)?;

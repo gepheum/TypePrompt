@@ -45,7 +45,6 @@
     kind: "matrix";
     matrix: Square[][];
     otherMatrix?: Square[][];
-    foo?: { [x: string]: Square[] };
     ints: integer[];
     init: boolean;
     encode: boolean;
@@ -84,7 +83,6 @@
     stringList: string[];
     structList: Square[];
     matrix: integer[][];
-    mapField: { [x: string]: integer };
     optString?: string;
     optInt?: integer;
     optNum?: number;
@@ -96,7 +94,6 @@
     optStringList?: string[];
     optStructList?: Square[];
     optMatrix?: integer[][];
-    optMap?: { [x: string]: integer };
   };
 
   type OmitDefaultType = {
