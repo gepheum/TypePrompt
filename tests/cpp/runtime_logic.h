@@ -2385,12 +2385,11 @@ struct Tool;
 
 struct Templates {
   std::int32_t edition{};
-  std::string signature;
-  bool single_namespace{};
+  std::string signature{};
   /// The key is a relative path to a .tp file. The value is the file content.
-  std::map<std::string, std::string> source_files;
-  std::map<std::string, Template> templates;
-  std::map<std::string, Tool> tools_;
+  std::map<std::string, std::string> source_files{};
+  std::map<std::string, Template> templates{};
+  std::map<std::string, Tool> tools_{};
 };
 
 inline JsonNode ToJsonNode(const Templates&);
@@ -2405,15 +2404,15 @@ inline JsonNode ToJsonNode(const OutputFormat_&);
 inline Status ParseValue(const JsonNode&, const JsonPath&, OutputFormat_&);
 
 struct TemplateTool {
-  std::string id;
-  std::string name;
+  std::string id{};
+  std::string name{};
 };
 
 inline JsonNode ToJsonNode(const TemplateTool&);
 inline Status ParseValue(const JsonNode&, const JsonPath&, TemplateTool&);
 
 struct BodyPiece_KindText {
-  std::string text;
+  std::string text{};
 };
 
 inline JsonNode ToJsonNode(const BodyPiece_KindText&);
@@ -2489,44 +2488,44 @@ inline JsonNode ToJsonNode(const BodyPiece&);
 inline Status ParseValue(const JsonNode&, const JsonPath&, BodyPiece&);
 
 struct ToolCallExample {
-  std::string call_id;
-  JsonNode input;
-  JsonNode output;
-  std::string tool_id;
-  std::string tool_name;
+  std::string call_id{};
+  JsonNode input{};
+  JsonNode output{};
+  std::string tool_id{};
+  std::string tool_name{};
 };
 
 inline JsonNode ToJsonNode(const ToolCallExample&);
 inline Status ParseValue(const JsonNode&, const JsonPath&, ToolCallExample&);
 
 struct FewShotExample_Steps {
-  std::vector<ToolCallExample> tool_calls;
+  std::vector<ToolCallExample> tool_calls{};
 };
 
 inline JsonNode ToJsonNode(const FewShotExample_Steps&);
 inline Status ParseValue(const JsonNode&, const JsonPath&, FewShotExample_Steps&);
 
 struct FewShotExample {
-  JsonNode input;
-  std::vector<FewShotExample_Steps> steps;
-  JsonNode output;
+  JsonNode input{};
+  JsonNode output{};
+  std::vector<FewShotExample_Steps> steps{};
 };
 
 inline JsonNode ToJsonNode(const FewShotExample&);
 inline Status ParseValue(const JsonNode&, const JsonPath&, FewShotExample&);
 
 struct TemplateContent {
-  std::optional<std::vector<FewShotExample>> examples;
-  std::optional<JsonNode> meta;
-  std::optional<std::vector<BodyPiece>> system;
-  std::optional<std::vector<BodyPiece>> user;
+  std::optional<std::vector<FewShotExample>> examples{};
+  std::optional<JsonNode> meta{};
+  std::optional<std::vector<BodyPiece>> system{};
+  std::optional<std::vector<BodyPiece>> user{};
 };
 
 inline JsonNode ToJsonNode(const TemplateContent&);
 inline Status ParseValue(const JsonNode&, const JsonPath&, TemplateContent&);
 
 struct TemplateContents_KindNoVariants {
-  TemplateContent content;
+  TemplateContent content{};
 };
 
 inline JsonNode ToJsonNode(const TemplateContents_KindNoVariants&);
@@ -2598,21 +2597,21 @@ inline JsonNode ToJsonNode(const TemplateContents&);
 inline Status ParseValue(const JsonNode&, const JsonPath&, TemplateContents&);
 
 struct Template {
-  TemplateContents contents;
-  std::string name;
-  std::string namespace_;
+  TemplateContents contents{};
+  std::string name{};
+  std::string namespace_{};
   OutputFormat_ output_format{};
-  JsonNode output_json_schema;
-  std::map<std::string, Snippet> snippets;
-  std::vector<TemplateTool> tools_;
+  JsonNode output_json_schema{};
+  std::map<std::string, Snippet> snippets{};
+  std::vector<TemplateTool> tools_{};
 };
 
 inline JsonNode ToJsonNode(const Template&);
 inline Status ParseValue(const JsonNode&, const JsonPath&, Template&);
 
 struct TemplateContents_KindVariants {
-  TemplateContent default_content;
-  std::map<std::string, TemplateContent> variants;
+  TemplateContent default_content{};
+  std::map<std::string, TemplateContent> variants{};
 };
 
 inline JsonNode ToJsonNode(const TemplateContents_KindVariants&);
@@ -2696,8 +2695,8 @@ inline Status ParseValue(const JsonNode&, const JsonPath&, InsertFormat&);
 
 struct BodyPiece_KindInsertVal {
   InsertFormat format{};
-  std::string indent;
-  Expression val;
+  std::string indent{};
+  Expression val{};
 };
 
 inline JsonNode ToJsonNode(const BodyPiece_KindInsertVal&);
@@ -2705,24 +2704,24 @@ inline Status ParseValue(const JsonNode&, const JsonPath&, BodyPiece_KindInsertV
 
 struct BodyPiece_KindInsertSnippet {
   /// Only contains whitespace characters.
-  std::string indent;
+  std::string indent{};
   /// Snippet name.
-  std::string snippet;
+  std::string snippet{};
 };
 
 inline JsonNode ToJsonNode(const BodyPiece_KindInsertSnippet&);
 inline Status ParseValue(const JsonNode&, const JsonPath&, BodyPiece_KindInsertSnippet&);
 
 struct Expression_KindProperty {
-  Expression left;
-  std::string property;
+  Expression left{};
+  std::string property{};
 };
 
 inline JsonNode ToJsonNode(const Expression_KindProperty&);
 inline Status ParseValue(const JsonNode&, const JsonPath&, Expression_KindProperty&);
 
 struct Snippet_KindSnippet {
-  std::vector<BodyPiece> body;
+  std::vector<BodyPiece> body{};
 };
 
 inline JsonNode ToJsonNode(const Snippet_KindSnippet&);
@@ -2805,28 +2804,28 @@ inline JsonNode ToJsonNode(const Snippet_KindSnippetIf_Is&);
 inline Status ParseValue(const JsonNode&, const JsonPath&, Snippet_KindSnippetIf_Is&);
 
 struct Snippet_KindSnippetIf {
-  std::vector<BodyPiece> else_;
-  Expression expression;
+  std::vector<BodyPiece> else_{};
+  Expression expression{};
   Snippet_KindSnippetIf_Is is{};
-  std::vector<BodyPiece> then;
+  std::vector<BodyPiece> then{};
 };
 
 inline JsonNode ToJsonNode(const Snippet_KindSnippetIf&);
 inline Status ParseValue(const JsonNode&, const JsonPath&, Snippet_KindSnippetIf&);
 
 struct Snippet_KindSnippetSwitch {
-  std::map<std::string, std::vector<BodyPiece>> branches;
-  Expression expression;
+  std::map<std::string, std::vector<BodyPiece>> branches{};
+  Expression expression{};
 };
 
 inline JsonNode ToJsonNode(const Snippet_KindSnippetSwitch&);
 inline Status ParseValue(const JsonNode&, const JsonPath&, Snippet_KindSnippetSwitch&);
 
 struct Tool {
-  std::string description;
-  std::string id;
-  JsonNode input_json_schema;
-  std::string name;
+  std::string description{};
+  std::string id{};
+  JsonNode input_json_schema{};
+  std::string name{};
 };
 
 inline JsonNode ToJsonNode(const Tool&);
@@ -2834,11 +2833,14 @@ inline Status ParseValue(const JsonNode&, const JsonPath&, Tool&);
 
 inline JsonNode ToJsonNode(const Templates& input) {
   using ::typeprompt::ToJsonNode;
-  return JsonNode::Object{
-      {"edition", ToJsonNode(input.edition)},          {"signature", ToJsonNode(input.signature)},
-      {"templates", ToJsonNode(input.templates)},      {"tools", ToJsonNode(input.tools_)},
-      {"sourceFiles", ToJsonNode(input.source_files)},
-  };
+  std::vector<std::pair<std::string_view, JsonNode>> entries;
+  entries.reserve(5);
+  entries.push_back({"edition", ToJsonNode(input.edition)});
+  entries.push_back({"signature", ToJsonNode(input.signature)});
+  entries.push_back({"templates", ToJsonNode(input.templates)});
+  entries.push_back({"tools", ToJsonNode(input.tools_)});
+  entries.push_back({"sourceFiles", ToJsonNode(input.source_files)});
+  return internal::MakeJsonObject(std::move(entries));
 }
 
 inline Status ParseValue(const JsonNode& node, const JsonPath& context, Templates& out) {
@@ -2853,15 +2855,16 @@ inline Status ParseValue(const JsonNode& node, const JsonPath& context, Template
 
 inline JsonNode ToJsonNode(const Template& input) {
   using ::typeprompt::ToJsonNode;
-  return JsonNode::Object{
-      {"name", ToJsonNode(input.name)},
-      {"namespace", ToJsonNode(input.namespace_)},
-      {"outputFormat", ToJsonNode(input.output_format)},
-      {"tools", ToJsonNode(input.tools_)},
-      {"contents", ToJsonNode(input.contents)},
-      {"snippets", ToJsonNode(input.snippets)},
-      {"outputJsonSchema", ToJsonNode(input.output_json_schema)},
-  };
+  std::vector<std::pair<std::string_view, JsonNode>> entries;
+  entries.reserve(7);
+  entries.push_back({"name", ToJsonNode(input.name)});
+  entries.push_back({"namespace", ToJsonNode(input.namespace_)});
+  entries.push_back({"outputFormat", ToJsonNode(input.output_format)});
+  entries.push_back({"tools", ToJsonNode(input.tools_)});
+  entries.push_back({"contents", ToJsonNode(input.contents)});
+  entries.push_back({"snippets", ToJsonNode(input.snippets)});
+  entries.push_back({"outputJsonSchema", ToJsonNode(input.output_json_schema)});
+  return internal::MakeJsonObject(std::move(entries));
 }
 
 inline Status ParseValue(const JsonNode& node, const JsonPath& context, Template& out) {
@@ -2876,7 +2879,7 @@ inline Status ParseValue(const JsonNode& node, const JsonPath& context, Template
   return std::move(parser).status();
 }
 
-inline JsonNode ToJsonNode(const OutputFormat_& input) {
+inline constexpr std::string_view to_string_view(OutputFormat_ input) {
   switch (input) {
     case OutputFormat_::kText:
       return "text";
@@ -2884,6 +2887,8 @@ inline JsonNode ToJsonNode(const OutputFormat_& input) {
       return "json";
   }
 }
+
+inline JsonNode ToJsonNode(const OutputFormat_& input) { return JsonNode(to_string_view(input)); }
 
 inline Status ParseValue(const JsonNode& node, const JsonPath& context, OutputFormat_& out) {
   if (node.type() != JsonNode::Type::kString) {
@@ -2900,10 +2905,11 @@ inline Status ParseValue(const JsonNode& node, const JsonPath& context, OutputFo
 
 inline JsonNode ToJsonNode(const TemplateTool& input) {
   using ::typeprompt::ToJsonNode;
-  return JsonNode::Object{
-      {"id", ToJsonNode(input.id)},
-      {"name", ToJsonNode(input.name)},
-  };
+  std::vector<std::pair<std::string_view, JsonNode>> entries;
+  entries.reserve(2);
+  entries.push_back({"id", ToJsonNode(input.id)});
+  entries.push_back({"name", ToJsonNode(input.name)});
+  return internal::MakeJsonObject(std::move(entries));
 }
 
 inline Status ParseValue(const JsonNode& node, const JsonPath& context, TemplateTool& out) {
@@ -2940,10 +2946,11 @@ inline Status ParseValue(const JsonNode& node, const JsonPath& context, Template
 
 inline JsonNode ToJsonNode(const TemplateContents_KindNoVariants& input) {
   using ::typeprompt::ToJsonNode;
-  return JsonNode::Object{
-      {"kind", ToJsonNode("no-variants")},
-      {"content", ToJsonNode(input.content)},
-  };
+  std::vector<std::pair<std::string_view, JsonNode>> entries;
+  entries.reserve(2);
+  entries.push_back({"kind", ToJsonNode("no-variants")});
+  entries.push_back({"content", ToJsonNode(input.content)});
+  return internal::MakeJsonObject(std::move(entries));
 }
 
 inline Status ParseValue(const JsonNode& node, const JsonPath& context,
@@ -2955,11 +2962,12 @@ inline Status ParseValue(const JsonNode& node, const JsonPath& context,
 
 inline JsonNode ToJsonNode(const TemplateContents_KindVariants& input) {
   using ::typeprompt::ToJsonNode;
-  return JsonNode::Object{
-      {"kind", ToJsonNode("variants")},
-      {"variants", ToJsonNode(input.variants)},
-      {"defaultContent", ToJsonNode(input.default_content)},
-  };
+  std::vector<std::pair<std::string_view, JsonNode>> entries;
+  entries.reserve(3);
+  entries.push_back({"kind", ToJsonNode("variants")});
+  entries.push_back({"variants", ToJsonNode(input.variants)});
+  entries.push_back({"defaultContent", ToJsonNode(input.default_content)});
+  return internal::MakeJsonObject(std::move(entries));
 }
 
 inline Status ParseValue(const JsonNode& node, const JsonPath& context,
@@ -2972,12 +2980,13 @@ inline Status ParseValue(const JsonNode& node, const JsonPath& context,
 
 inline JsonNode ToJsonNode(const TemplateContent& input) {
   using ::typeprompt::ToJsonNode;
-  return JsonNode::Object{
-      {"meta", ToJsonNode(input.meta)},
-      {"system", ToJsonNode(input.system)},
-      {"user", ToJsonNode(input.user)},
-      {"examples", ToJsonNode(input.examples)},
-  };
+  std::vector<std::pair<std::string_view, JsonNode>> entries;
+  entries.reserve(4);
+  entries.push_back({"meta", ToJsonNode(input.meta)});
+  entries.push_back({"system", ToJsonNode(input.system)});
+  entries.push_back({"user", ToJsonNode(input.user)});
+  entries.push_back({"examples", ToJsonNode(input.examples)});
+  return internal::MakeJsonObject(std::move(entries));
 }
 
 inline Status ParseValue(const JsonNode& node, const JsonPath& context, TemplateContent& out) {
@@ -2991,26 +3000,28 @@ inline Status ParseValue(const JsonNode& node, const JsonPath& context, Template
 
 inline JsonNode ToJsonNode(const FewShotExample& input) {
   using ::typeprompt::ToJsonNode;
-  return JsonNode::Object{
-      {"input", ToJsonNode(input.input)},
-      {"output", ToJsonNode(input.output)},
-      {"steps", ToJsonNode(input.steps)},
-  };
+  std::vector<std::pair<std::string_view, JsonNode>> entries;
+  entries.reserve(3);
+  entries.push_back({"input", ToJsonNode(input.input)});
+  entries.push_back({"output", ToJsonNode(input.output)});
+  entries.push_back({"steps", ToJsonNode(input.steps)});
+  return internal::MakeJsonObject(std::move(entries));
 }
 
 inline Status ParseValue(const JsonNode& node, const JsonPath& context, FewShotExample& out) {
   internal::StructParser parser(&node, context);
   parser.Parse("input", out.input);
-  parser.Parse("steps", out.steps);
   parser.Parse("output", out.output);
+  parser.Parse("steps", out.steps);
   return std::move(parser).status();
 }
 
 inline JsonNode ToJsonNode(const FewShotExample_Steps& input) {
   using ::typeprompt::ToJsonNode;
-  return JsonNode::Object{
-      {"toolCalls", ToJsonNode(input.tool_calls)},
-  };
+  std::vector<std::pair<std::string_view, JsonNode>> entries;
+  entries.reserve(1);
+  entries.push_back({"toolCalls", ToJsonNode(input.tool_calls)});
+  return internal::MakeJsonObject(std::move(entries));
 }
 
 inline Status ParseValue(const JsonNode& node, const JsonPath& context, FewShotExample_Steps& out) {
@@ -3021,11 +3032,14 @@ inline Status ParseValue(const JsonNode& node, const JsonPath& context, FewShotE
 
 inline JsonNode ToJsonNode(const ToolCallExample& input) {
   using ::typeprompt::ToJsonNode;
-  return JsonNode::Object{
-      {"callId", ToJsonNode(input.call_id)},     {"toolId", ToJsonNode(input.tool_id)},
-      {"toolName", ToJsonNode(input.tool_name)}, {"input", ToJsonNode(input.input)},
-      {"output", ToJsonNode(input.output)},
-  };
+  std::vector<std::pair<std::string_view, JsonNode>> entries;
+  entries.reserve(5);
+  entries.push_back({"callId", ToJsonNode(input.call_id)});
+  entries.push_back({"toolId", ToJsonNode(input.tool_id)});
+  entries.push_back({"toolName", ToJsonNode(input.tool_name)});
+  entries.push_back({"input", ToJsonNode(input.input)});
+  entries.push_back({"output", ToJsonNode(input.output)});
+  return internal::MakeJsonObject(std::move(entries));
 }
 
 inline Status ParseValue(const JsonNode& node, const JsonPath& context, ToolCallExample& out) {
@@ -3069,10 +3083,11 @@ inline Status ParseValue(const JsonNode& node, const JsonPath& context, BodyPiec
 
 inline JsonNode ToJsonNode(const BodyPiece_KindText& input) {
   using ::typeprompt::ToJsonNode;
-  return JsonNode::Object{
-      {"kind", ToJsonNode("text")},
-      {"text", ToJsonNode(input.text)},
-  };
+  std::vector<std::pair<std::string_view, JsonNode>> entries;
+  entries.reserve(2);
+  entries.push_back({"kind", ToJsonNode("text")});
+  entries.push_back({"text", ToJsonNode(input.text)});
+  return internal::MakeJsonObject(std::move(entries));
 }
 
 inline Status ParseValue(const JsonNode& node, const JsonPath& context, BodyPiece_KindText& out) {
@@ -3083,12 +3098,13 @@ inline Status ParseValue(const JsonNode& node, const JsonPath& context, BodyPiec
 
 inline JsonNode ToJsonNode(const BodyPiece_KindInsertVal& input) {
   using ::typeprompt::ToJsonNode;
-  return JsonNode::Object{
-      {"kind", ToJsonNode("insert-val")},
-      {"val", ToJsonNode(input.val)},
-      {"format", ToJsonNode(input.format)},
-      {"indent", ToJsonNode(input.indent)},
-  };
+  std::vector<std::pair<std::string_view, JsonNode>> entries;
+  entries.reserve(4);
+  entries.push_back({"kind", ToJsonNode("insert-val")});
+  entries.push_back({"val", ToJsonNode(input.val)});
+  entries.push_back({"format", ToJsonNode(input.format)});
+  entries.push_back({"indent", ToJsonNode(input.indent)});
+  return internal::MakeJsonObject(std::move(entries));
 }
 
 inline Status ParseValue(const JsonNode& node, const JsonPath& context,
@@ -3102,11 +3118,12 @@ inline Status ParseValue(const JsonNode& node, const JsonPath& context,
 
 inline JsonNode ToJsonNode(const BodyPiece_KindInsertSnippet& input) {
   using ::typeprompt::ToJsonNode;
-  return JsonNode::Object{
-      {"kind", ToJsonNode("insert-snippet")},
-      {"snippet", ToJsonNode(input.snippet)},
-      {"indent", ToJsonNode(input.indent)},
-  };
+  std::vector<std::pair<std::string_view, JsonNode>> entries;
+  entries.reserve(3);
+  entries.push_back({"kind", ToJsonNode("insert-snippet")});
+  entries.push_back({"snippet", ToJsonNode(input.snippet)});
+  entries.push_back({"indent", ToJsonNode(input.indent)});
+  return internal::MakeJsonObject(std::move(entries));
 }
 
 inline Status ParseValue(const JsonNode& node, const JsonPath& context,
@@ -3117,7 +3134,7 @@ inline Status ParseValue(const JsonNode& node, const JsonPath& context,
   return std::move(parser).status();
 }
 
-inline JsonNode ToJsonNode(const InsertFormat& input) {
+inline constexpr std::string_view to_string_view(InsertFormat input) {
   switch (input) {
     case InsertFormat::kJson:
       return "json";
@@ -3133,6 +3150,8 @@ inline JsonNode ToJsonNode(const InsertFormat& input) {
       return "text";
   }
 }
+
+inline JsonNode ToJsonNode(const InsertFormat& input) { return JsonNode(to_string_view(input)); }
 
 inline Status ParseValue(const JsonNode& node, const JsonPath& context, InsertFormat& out) {
   if (node.type() != JsonNode::Type::kString) {
@@ -3182,9 +3201,10 @@ inline Status ParseValue(const JsonNode& node, const JsonPath& context, Expressi
 
 inline JsonNode ToJsonNode(const Expression_KindInput& input) {
   using ::typeprompt::ToJsonNode;
-  return JsonNode::Object{
-      {"kind", ToJsonNode("input")},
-  };
+  std::vector<std::pair<std::string_view, JsonNode>> entries;
+  entries.reserve(1);
+  entries.push_back({"kind", ToJsonNode("input")});
+  return internal::MakeJsonObject(std::move(entries));
 }
 
 inline Status ParseValue(const JsonNode& node, const JsonPath& context, Expression_KindInput& out) {
@@ -3194,11 +3214,12 @@ inline Status ParseValue(const JsonNode& node, const JsonPath& context, Expressi
 
 inline JsonNode ToJsonNode(const Expression_KindProperty& input) {
   using ::typeprompt::ToJsonNode;
-  return JsonNode::Object{
-      {"kind", ToJsonNode("property")},
-      {"left", ToJsonNode(input.left)},
-      {"property", ToJsonNode(input.property)},
-  };
+  std::vector<std::pair<std::string_view, JsonNode>> entries;
+  entries.reserve(3);
+  entries.push_back({"kind", ToJsonNode("property")});
+  entries.push_back({"left", ToJsonNode(input.left)});
+  entries.push_back({"property", ToJsonNode(input.property)});
+  return internal::MakeJsonObject(std::move(entries));
 }
 
 inline Status ParseValue(const JsonNode& node, const JsonPath& context,
@@ -3240,10 +3261,11 @@ inline Status ParseValue(const JsonNode& node, const JsonPath& context, Snippet&
 
 inline JsonNode ToJsonNode(const Snippet_KindSnippet& input) {
   using ::typeprompt::ToJsonNode;
-  return JsonNode::Object{
-      {"kind", ToJsonNode("snippet")},
-      {"body", ToJsonNode(input.body)},
-  };
+  std::vector<std::pair<std::string_view, JsonNode>> entries;
+  entries.reserve(2);
+  entries.push_back({"kind", ToJsonNode("snippet")});
+  entries.push_back({"body", ToJsonNode(input.body)});
+  return internal::MakeJsonObject(std::move(entries));
 }
 
 inline Status ParseValue(const JsonNode& node, const JsonPath& context, Snippet_KindSnippet& out) {
@@ -3254,11 +3276,14 @@ inline Status ParseValue(const JsonNode& node, const JsonPath& context, Snippet_
 
 inline JsonNode ToJsonNode(const Snippet_KindSnippetIf& input) {
   using ::typeprompt::ToJsonNode;
-  return JsonNode::Object{
-      {"kind", ToJsonNode("snippet-if")}, {"expression", ToJsonNode(input.expression)},
-      {"is", ToJsonNode(input.is)},       {"then", ToJsonNode(input.then)},
-      {"else", ToJsonNode(input.else_)},
-  };
+  std::vector<std::pair<std::string_view, JsonNode>> entries;
+  entries.reserve(5);
+  entries.push_back({"kind", ToJsonNode("snippet-if")});
+  entries.push_back({"expression", ToJsonNode(input.expression)});
+  entries.push_back({"is", ToJsonNode(input.is)});
+  entries.push_back({"then", ToJsonNode(input.then)});
+  entries.push_back({"else", ToJsonNode(input.else_)});
+  return internal::MakeJsonObject(std::move(entries));
 }
 
 inline Status ParseValue(const JsonNode& node, const JsonPath& context,
@@ -3271,7 +3296,7 @@ inline Status ParseValue(const JsonNode& node, const JsonPath& context,
   return std::move(parser).status();
 }
 
-inline JsonNode ToJsonNode(const Snippet_KindSnippetIf_Is& input) {
+inline constexpr std::string_view to_string_view(Snippet_KindSnippetIf_Is input) {
   switch (input) {
     case Snippet_KindSnippetIf_Is::kNotEmpty:
       return "not-empty";
@@ -3280,6 +3305,10 @@ inline JsonNode ToJsonNode(const Snippet_KindSnippetIf_Is& input) {
     default:
       return "not-null";
   }
+}
+
+inline JsonNode ToJsonNode(const Snippet_KindSnippetIf_Is& input) {
+  return JsonNode(to_string_view(input));
 }
 
 inline Status ParseValue(const JsonNode& node, const JsonPath& context,
@@ -3300,11 +3329,12 @@ inline Status ParseValue(const JsonNode& node, const JsonPath& context,
 
 inline JsonNode ToJsonNode(const Snippet_KindSnippetSwitch& input) {
   using ::typeprompt::ToJsonNode;
-  return JsonNode::Object{
-      {"kind", ToJsonNode("snippet-switch")},
-      {"expression", ToJsonNode(input.expression)},
-      {"branches", ToJsonNode(input.branches)},
-  };
+  std::vector<std::pair<std::string_view, JsonNode>> entries;
+  entries.reserve(3);
+  entries.push_back({"kind", ToJsonNode("snippet-switch")});
+  entries.push_back({"expression", ToJsonNode(input.expression)});
+  entries.push_back({"branches", ToJsonNode(input.branches)});
+  return internal::MakeJsonObject(std::move(entries));
 }
 
 inline Status ParseValue(const JsonNode& node, const JsonPath& context,
@@ -3317,12 +3347,13 @@ inline Status ParseValue(const JsonNode& node, const JsonPath& context,
 
 inline JsonNode ToJsonNode(const Tool& input) {
   using ::typeprompt::ToJsonNode;
-  return JsonNode::Object{
-      {"id", ToJsonNode(input.id)},
-      {"name", ToJsonNode(input.name)},
-      {"description", ToJsonNode(input.description)},
-      {"inputJsonSchema", ToJsonNode(input.input_json_schema)},
-  };
+  std::vector<std::pair<std::string_view, JsonNode>> entries;
+  entries.reserve(4);
+  entries.push_back({"id", ToJsonNode(input.id)});
+  entries.push_back({"name", ToJsonNode(input.name)});
+  entries.push_back({"description", ToJsonNode(input.description)});
+  entries.push_back({"inputJsonSchema", ToJsonNode(input.input_json_schema)});
+  return internal::MakeJsonObject(std::move(entries));
 }
 
 inline Status ParseValue(const JsonNode& node, const JsonPath& context, Tool& out) {

@@ -322,15 +322,15 @@ public enum TypePromptRuntime {
 
   // <generated:spec>
   fileprivate enum Spec {
-    struct Templates: Codable, Sendable {
-      let edition: Int32
-      let signature: String
-      let templates: [String: Template]
-      let tools: [String: Tool]
+    public struct Templates: Codable, Sendable {
+      public let edition: Int32
+      public let signature: String
+      public let templates: [String: Template]
+      public let tools: [String: Tool]
       /// The key is a relative path to a .tp file. The value is the file content.
-      let sourceFiles: [String: String]
+      public let sourceFiles: [String: String]
 
-      init(
+      public init(
         edition: Int32,
         signature: String,
         templates: [String: Template],
@@ -345,16 +345,16 @@ public enum TypePromptRuntime {
       }
     }
 
-    struct Template: Codable, Sendable {
-      let name: String
-      let namespace: String
-      let outputFormat: OutputFormat
-      let tools: [TemplateTool]
-      let contents: TemplateContents
-      let snippets: [String: Snippet]
-      let outputJsonSchema: JsonElement
+    public struct Template: Codable, Sendable {
+      public let name: String
+      public let namespace: String
+      public let outputFormat: OutputFormat
+      public let tools: [TemplateTool]
+      public let contents: TemplateContents
+      public let snippets: [String: Snippet]
+      public let outputJsonSchema: JsonElement
 
-      init(
+      public init(
         name: String,
         namespace: String,
         outputFormat: OutputFormat,
@@ -373,16 +373,16 @@ public enum TypePromptRuntime {
       }
     }
 
-    enum OutputFormat: String, Codable, Sendable {
+    public enum OutputFormat: String, Codable, Sendable {
       case json = "json"
       case text = "text"
     }
 
-    struct TemplateTool: Codable, Sendable {
-      let id: String
-      let name: String
+    public struct TemplateTool: Codable, Sendable {
+      public let id: String
+      public let name: String
 
-      init(
+      public init(
         id: String,
         name: String,
       ) {
@@ -391,11 +391,11 @@ public enum TypePromptRuntime {
       }
     }
 
-    enum TemplateContents: Codable, Sendable {
+    public enum TemplateContents: Codable, Sendable {
       case kindNoVariants(TemplateContents_KindNoVariants)
       case kindVariants(TemplateContents_KindVariants)
 
-      func encode(to encoder: any Encoder) throws {
+      public func encode(to encoder: any Encoder) throws {
         var container = encoder.singleValueContainer()
         switch self {
         case .kindNoVariants(let value):
@@ -409,7 +409,7 @@ public enum TypePromptRuntime {
         case discriminator = "kind"
       }
 
-      init(from decoder: any Decoder) throws {
+      public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: DiscriminatorCodingKeys.self)
         let discriminator = try container.decode(String.self, forKey: .discriminator)
         switch discriminator {
@@ -421,18 +421,18 @@ public enum TypePromptRuntime {
           throw DecodingError.dataCorrupted(
             DecodingError.Context(
               codingPath: decoder.codingPath,
-              debugDescription: "Unknown discriminator: \(discriminator)",
-            ),
+              debugDescription: "Unknown discriminator: \(discriminator)"
+            )
           )
         }
       }
     }
 
-    struct TemplateContents_KindNoVariants: Codable, Sendable {
-      let kind: String
-      let content: TemplateContent
+    public struct TemplateContents_KindNoVariants: Codable, Sendable {
+      public let kind: String
+      public let content: TemplateContent
 
-      init(
+      public init(
         content: TemplateContent,
       ) {
         self.kind = "no-variants"
@@ -440,12 +440,12 @@ public enum TypePromptRuntime {
       }
     }
 
-    struct TemplateContents_KindVariants: Codable, Sendable {
-      let kind: String
-      let variants: [String: TemplateContent]
-      let defaultContent: TemplateContent
+    public struct TemplateContents_KindVariants: Codable, Sendable {
+      public let kind: String
+      public let variants: [String: TemplateContent]
+      public let defaultContent: TemplateContent
 
-      init(
+      public init(
         variants: [String: TemplateContent],
         defaultContent: TemplateContent,
       ) {
@@ -455,13 +455,13 @@ public enum TypePromptRuntime {
       }
     }
 
-    struct TemplateContent: Codable, Sendable {
-      let meta: JsonElement?
-      let system: [BodyPiece]?
-      let user: [BodyPiece]?
-      let examples: [FewShotExample]?
+    public struct TemplateContent: Codable, Sendable {
+      public let meta: JsonElement?
+      public let system: [BodyPiece]?
+      public let user: [BodyPiece]?
+      public let examples: [FewShotExample]?
 
-      init(
+      public init(
         meta: JsonElement? = nil,
         system: [BodyPiece]? = nil,
         user: [BodyPiece]? = nil,
@@ -472,14 +472,53 @@ public enum TypePromptRuntime {
         self.user = user
         self.examples = examples
       }
+
+      private enum CodingKeys: String, CodingKey {
+        case meta = "meta"
+        case system = "system"
+        case user = "user"
+        case examples = "examples"
+      }
+
+      public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        if let value = self.meta {
+          try container.encode(value, forKey: .meta)
+        } else {
+          try container.encodeNil(forKey: .meta)
+        }
+        if let value = self.system {
+          try container.encode(value, forKey: .system)
+        } else {
+          try container.encodeNil(forKey: .system)
+        }
+        if let value = self.user {
+          try container.encode(value, forKey: .user)
+        } else {
+          try container.encodeNil(forKey: .user)
+        }
+        if let value = self.examples {
+          try container.encode(value, forKey: .examples)
+        } else {
+          try container.encodeNil(forKey: .examples)
+        }
+      }
+
+      public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.meta = try container.decodeIfPresent(JsonElement.self, forKey: .meta)
+        self.system = try container.decodeIfPresent([BodyPiece].self, forKey: .system)
+        self.user = try container.decodeIfPresent([BodyPiece].self, forKey: .user)
+        self.examples = try container.decodeIfPresent([FewShotExample].self, forKey: .examples)
+      }
     }
 
-    struct FewShotExample: Codable, Sendable {
-      let input: JsonElement
-      let output: JsonElement
-      let steps: [FewShotExample_Steps]
+    public struct FewShotExample: Codable, Sendable {
+      public let input: JsonElement
+      public let output: JsonElement
+      public let steps: [FewShotExample_Steps]
 
-      init(
+      public init(
         input: JsonElement,
         output: JsonElement,
         steps: [FewShotExample_Steps],
@@ -490,24 +529,24 @@ public enum TypePromptRuntime {
       }
     }
 
-    struct FewShotExample_Steps: Codable, Sendable {
-      let toolCalls: [ToolCallExample]
+    public struct FewShotExample_Steps: Codable, Sendable {
+      public let toolCalls: [ToolCallExample]
 
-      init(
+      public init(
         toolCalls: [ToolCallExample],
       ) {
         self.toolCalls = toolCalls
       }
     }
 
-    struct ToolCallExample: Codable, Sendable {
-      let callId: String
-      let toolId: String
-      let toolName: String
-      let input: JsonElement
-      let output: JsonElement
+    public struct ToolCallExample: Codable, Sendable {
+      public let callId: String
+      public let toolId: String
+      public let toolName: String
+      public let input: JsonElement
+      public let output: JsonElement
 
-      init(
+      public init(
         callId: String,
         toolId: String,
         toolName: String,
@@ -522,12 +561,12 @@ public enum TypePromptRuntime {
       }
     }
 
-    enum BodyPiece: Codable, Sendable {
+    public enum BodyPiece: Codable, Sendable {
       case kindText(BodyPiece_KindText)
       case kindInsertVal(BodyPiece_KindInsertVal)
       case kindInsertSnippet(BodyPiece_KindInsertSnippet)
 
-      func encode(to encoder: any Encoder) throws {
+      public func encode(to encoder: any Encoder) throws {
         var container = encoder.singleValueContainer()
         switch self {
         case .kindText(let value):
@@ -543,7 +582,7 @@ public enum TypePromptRuntime {
         case discriminator = "kind"
       }
 
-      init(from decoder: any Decoder) throws {
+      public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: DiscriminatorCodingKeys.self)
         let discriminator = try container.decode(String.self, forKey: .discriminator)
         switch discriminator {
@@ -557,18 +596,18 @@ public enum TypePromptRuntime {
           throw DecodingError.dataCorrupted(
             DecodingError.Context(
               codingPath: decoder.codingPath,
-              debugDescription: "Unknown discriminator: \(discriminator)",
-            ),
+              debugDescription: "Unknown discriminator: \(discriminator)"
+            )
           )
         }
       }
     }
 
-    struct BodyPiece_KindText: Codable, Sendable {
-      let kind: String
-      let text: String
+    public struct BodyPiece_KindText: Codable, Sendable {
+      public let kind: String
+      public let text: String
 
-      init(
+      public init(
         text: String,
       ) {
         self.kind = "text"
@@ -576,13 +615,13 @@ public enum TypePromptRuntime {
       }
     }
 
-    struct BodyPiece_KindInsertVal: Codable, Sendable {
-      let kind: String
-      let val: Expression
-      let format: InsertFormat
-      let indent: String
+    public struct BodyPiece_KindInsertVal: Codable, Sendable {
+      public let kind: String
+      public let val: Expression
+      public let format: InsertFormat
+      public let indent: String
 
-      init(
+      public init(
         val: Expression,
         format: InsertFormat,
         indent: String,
@@ -594,14 +633,14 @@ public enum TypePromptRuntime {
       }
     }
 
-    struct BodyPiece_KindInsertSnippet: Codable, Sendable {
-      let kind: String
+    public struct BodyPiece_KindInsertSnippet: Codable, Sendable {
+      public let kind: String
       /// Snippet name.
-      let snippet: String
+      public let snippet: String
       /// Only contains whitespace characters.
-      let indent: String
+      public let indent: String
 
-      init(
+      public init(
         snippet: String,
         indent: String,
       ) {
@@ -611,7 +650,7 @@ public enum TypePromptRuntime {
       }
     }
 
-    enum InsertFormat: String, Codable, Sendable {
+    public enum InsertFormat: String, Codable, Sendable {
       case text = "text"
       case json = "json"
       case yaml = "yaml"
@@ -620,11 +659,11 @@ public enum TypePromptRuntime {
       case tsv = "tsv"
     }
 
-    indirect enum Expression: Codable, Sendable {
+    indirect public enum Expression: Codable, Sendable {
       case kindInput(Expression_KindInput)
       case kindProperty(Expression_KindProperty)
 
-      func encode(to encoder: any Encoder) throws {
+      public func encode(to encoder: any Encoder) throws {
         var container = encoder.singleValueContainer()
         switch self {
         case .kindInput(let value):
@@ -638,7 +677,7 @@ public enum TypePromptRuntime {
         case discriminator = "kind"
       }
 
-      init(from decoder: any Decoder) throws {
+      public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: DiscriminatorCodingKeys.self)
         let discriminator = try container.decode(String.self, forKey: .discriminator)
         switch discriminator {
@@ -650,27 +689,27 @@ public enum TypePromptRuntime {
           throw DecodingError.dataCorrupted(
             DecodingError.Context(
               codingPath: decoder.codingPath,
-              debugDescription: "Unknown discriminator: \(discriminator)",
-            ),
+              debugDescription: "Unknown discriminator: \(discriminator)"
+            )
           )
         }
       }
     }
 
-    struct Expression_KindInput: Codable, Sendable {
-      let kind: String
+    public struct Expression_KindInput: Codable, Sendable {
+      public let kind: String
 
-      init() {
+      public init() {
         self.kind = "input"
       }
     }
 
-    struct Expression_KindProperty: Codable, Sendable {
-      let kind: String
-      let `left`: Expression
-      let property: String
+    public struct Expression_KindProperty: Codable, Sendable {
+      public let kind: String
+      public let `left`: Expression
+      public let property: String
 
-      init(
+      public init(
         `left`: Expression,
         property: String,
       ) {
@@ -680,12 +719,12 @@ public enum TypePromptRuntime {
       }
     }
 
-    enum Snippet: Codable, Sendable {
+    public enum Snippet: Codable, Sendable {
       case kindSnippet(Snippet_KindSnippet)
       case kindSnippetIf(Snippet_KindSnippetIf)
       case kindSnippetSwitch(Snippet_KindSnippetSwitch)
 
-      func encode(to encoder: any Encoder) throws {
+      public func encode(to encoder: any Encoder) throws {
         var container = encoder.singleValueContainer()
         switch self {
         case .kindSnippet(let value):
@@ -701,7 +740,7 @@ public enum TypePromptRuntime {
         case discriminator = "kind"
       }
 
-      init(from decoder: any Decoder) throws {
+      public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: DiscriminatorCodingKeys.self)
         let discriminator = try container.decode(String.self, forKey: .discriminator)
         switch discriminator {
@@ -715,18 +754,18 @@ public enum TypePromptRuntime {
           throw DecodingError.dataCorrupted(
             DecodingError.Context(
               codingPath: decoder.codingPath,
-              debugDescription: "Unknown discriminator: \(discriminator)",
-            ),
+              debugDescription: "Unknown discriminator: \(discriminator)"
+            )
           )
         }
       }
     }
 
-    struct Snippet_KindSnippet: Codable, Sendable {
-      let kind: String
-      let body: [BodyPiece]
+    public struct Snippet_KindSnippet: Codable, Sendable {
+      public let kind: String
+      public let body: [BodyPiece]
 
-      init(
+      public init(
         body: [BodyPiece],
       ) {
         self.kind = "snippet"
@@ -734,14 +773,14 @@ public enum TypePromptRuntime {
       }
     }
 
-    struct Snippet_KindSnippetIf: Codable, Sendable {
-      let kind: String
-      let expression: Expression
-      let `is`: Snippet_KindSnippetIf_Is
-      let then: [BodyPiece]
-      let `else`: [BodyPiece]
+    public struct Snippet_KindSnippetIf: Codable, Sendable {
+      public let kind: String
+      public let expression: Expression
+      public let `is`: Snippet_KindSnippetIf_Is
+      public let then: [BodyPiece]
+      public let `else`: [BodyPiece]
 
-      init(
+      public init(
         expression: Expression,
         `is`: Snippet_KindSnippetIf_Is,
         then: [BodyPiece],
@@ -755,18 +794,18 @@ public enum TypePromptRuntime {
       }
     }
 
-    enum Snippet_KindSnippetIf_Is: String, Codable, Sendable {
+    public enum Snippet_KindSnippetIf_Is: String, Codable, Sendable {
       case notNull = "not-null"
       case notEmpty = "not-empty"
       case `true` = "true"
     }
 
-    struct Snippet_KindSnippetSwitch: Codable, Sendable {
-      let kind: String
-      let expression: Expression
-      let branches: [String: [BodyPiece]]
+    public struct Snippet_KindSnippetSwitch: Codable, Sendable {
+      public let kind: String
+      public let expression: Expression
+      public let branches: [String: [BodyPiece]]
 
-      init(
+      public init(
         expression: Expression,
         branches: [String: [BodyPiece]],
       ) {
@@ -776,13 +815,13 @@ public enum TypePromptRuntime {
       }
     }
 
-    struct Tool: Codable, Sendable {
-      let id: String
-      let name: String
-      let description: String
-      let inputJsonSchema: JsonElement
+    public struct Tool: Codable, Sendable {
+      public let id: String
+      public let name: String
+      public let description: String
+      public let inputJsonSchema: JsonElement
 
-      init(
+      public init(
         id: String,
         name: String,
         description: String,

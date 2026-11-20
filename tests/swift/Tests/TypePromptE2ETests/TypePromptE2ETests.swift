@@ -379,23 +379,23 @@ struct VariantsProductDescriptionTests {
 
   let marketing = TypePrompt04.prompts.renderWriteProductDescription(
     TypePrompt04.Schema.WriteProductDescription.Input(
+      variant: .marketing,
       productName: "AquaFilter Pro",
-      features: features,
-      variant: .marketing
+      features: features
     )
   )
   let technical = TypePrompt04.prompts.renderWriteProductDescription(
     TypePrompt04.Schema.WriteProductDescription.Input(
+      variant: .technical,
       productName: "AquaFilter Pro",
-      features: features,
-      variant: .technical
+      features: features
     )
   )
   let brief = TypePrompt04.prompts.renderWriteProductDescription(
     TypePrompt04.Schema.WriteProductDescription.Input(
+      variant: .brief,
       productName: "AquaFilter Pro",
-      features: features,
-      variant: .brief
+      features: features
     )
   )
 

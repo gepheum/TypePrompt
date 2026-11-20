@@ -40,10 +40,10 @@ export type TemplateContents =
     };
 
 export type TemplateContent = {
-  readonly meta?: unknown;
-  readonly system?: Body;
-  readonly user?: Body;
-  readonly examples?: readonly FewShotExample[];
+  readonly meta?: unknown | null;
+  readonly system?: Body | null;
+  readonly user?: Body | null;
+  readonly examples?: readonly FewShotExample[] | null;
 };
 
 export type FewShotExample = {

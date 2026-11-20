@@ -486,11 +486,16 @@ final class _Spec_TemplateContent {
   });
 
   Map<String, dynamic> toJson() {
+    final meta = this.meta;
+    final system = this.system;
+    final user = this.user;
+    final examples = this.examples;
     return {
       "meta": meta,
-      "system": system?.map((e) => e.toJson()).toList(),
-      "user": user?.map((e) => e.toJson()).toList(),
-      "examples": examples?.map((e) => e.toJson()).toList(),
+      "system": system == null ? null : system.map((e) => e.toJson()).toList(),
+      "user": user == null ? null : user.map((e) => e.toJson()).toList(),
+      "examples":
+          examples == null ? null : examples.map((e) => e.toJson()).toList(),
     };
   }
 

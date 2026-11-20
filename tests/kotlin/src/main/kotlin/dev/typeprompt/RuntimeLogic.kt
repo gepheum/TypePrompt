@@ -246,10 +246,8 @@ internal object Spec {
     enum class OutputFormat(val value: String) {
         @SerialName("json")
         Json("json"),
-
         @SerialName("text")
-        Text("text"),
-        ;
+        Text("text");
 
         override fun toString(): String = value
     }
@@ -263,63 +261,103 @@ internal object Spec {
     )
 
     // Exported as 'Spec.TemplateContents'
-    @Serializable(with = TemplateContents_Serializer::class)
+    @Serializable(with = TemplateContents__Serializer::class)
     sealed interface TemplateContents
 
-    private object TemplateContents_Serializer :
-        JsonContentPolymorphicSerializer<TemplateContents>(TemplateContents::class) {
+    private object TemplateContents__Serializer : JsonContentPolymorphicSerializer<TemplateContents>(TemplateContents::class) {
         override fun selectDeserializer(element: JsonElement): DeserializationStrategy<TemplateContents> {
             return when (val kind = element.jsonObject["kind"]?.jsonPrimitive?.contentOrNull) {
                 "no-variants" -> TemplateContents_KindNoVariants.serializer()
                 "variants" -> TemplateContents_KindVariants.serializer()
-                else -> throw IllegalArgumentException("Unknown discriminant: '$kind'")
+                else -> throw IllegalArgumentException("Unknown discriminant: '${kind}'")
             }
         }
     }
 
     // Exported as 'Spec.TemplateContents_KindNoVariants'
     @OptIn(ExperimentalSerializationApi::class)
+    @Serializable(with = TemplateContents_KindNoVariants__Serializer::class)
+    @SerialName("no-variants")
+    data class TemplateContents_KindNoVariants(
+        val content: TemplateContent,
+    ) : TemplateContents
+
+    @OptIn(ExperimentalSerializationApi::class)
     @Serializable
     @SerialName("no-variants")
-    data class TemplateContents_KindNoVariants private constructor(
-        val kind: String,
+    private data class TemplateContents_KindNoVariants__Surrogate(
+        @property:kotlinx.serialization.EncodeDefault val kind: String = "no-variants",
         val content: TemplateContent,
-    ) : TemplateContents {
-        constructor(
-            content: TemplateContent,
-        ) : this(
-            kind = "no-variants",
-            content = content,
-        )
+    )
+
+    private object TemplateContents_KindNoVariants__Serializer : kotlinx.serialization.KSerializer<TemplateContents_KindNoVariants> {
+        override val descriptor = TemplateContents_KindNoVariants__Surrogate.serializer().descriptor
+
+        override fun serialize(encoder: kotlinx.serialization.encoding.Encoder, value: TemplateContents_KindNoVariants) {
+            encoder.encodeSerializableValue(
+                TemplateContents_KindNoVariants__Surrogate.serializer(),
+                TemplateContents_KindNoVariants__Surrogate(
+                    content = value.content,
+                ),
+            )
+        }
+
+        override fun deserialize(decoder: kotlinx.serialization.encoding.Decoder): TemplateContents_KindNoVariants {
+            val surrogate = decoder.decodeSerializableValue(TemplateContents_KindNoVariants__Surrogate.serializer())
+            return TemplateContents_KindNoVariants(
+                content = surrogate.content,
+            )
+        }
     }
 
     // Exported as 'Spec.TemplateContents_KindVariants'
     @OptIn(ExperimentalSerializationApi::class)
-    @Serializable
+    @Serializable(with = TemplateContents_KindVariants__Serializer::class)
     @SerialName("variants")
-    data class TemplateContents_KindVariants private constructor(
-        val kind: String,
+    data class TemplateContents_KindVariants(
         val variants: Map<String, TemplateContent>,
         val defaultContent: TemplateContent,
-    ) : TemplateContents {
-        constructor(
-            variants: Map<String, TemplateContent>,
-            defaultContent: TemplateContent,
-        ) : this(
-            kind = "variants",
-            variants = variants,
-            defaultContent = defaultContent,
-        )
+    ) : TemplateContents
+
+    @OptIn(ExperimentalSerializationApi::class)
+    @Serializable
+    @SerialName("variants")
+    private data class TemplateContents_KindVariants__Surrogate(
+        @property:kotlinx.serialization.EncodeDefault val kind: String = "variants",
+        val variants: Map<String, TemplateContent>,
+        val defaultContent: TemplateContent,
+    )
+
+    private object TemplateContents_KindVariants__Serializer : kotlinx.serialization.KSerializer<TemplateContents_KindVariants> {
+        override val descriptor = TemplateContents_KindVariants__Surrogate.serializer().descriptor
+
+        override fun serialize(encoder: kotlinx.serialization.encoding.Encoder, value: TemplateContents_KindVariants) {
+            encoder.encodeSerializableValue(
+                TemplateContents_KindVariants__Surrogate.serializer(),
+                TemplateContents_KindVariants__Surrogate(
+                    variants = value.variants,
+                    defaultContent = value.defaultContent,
+                ),
+            )
+        }
+
+        override fun deserialize(decoder: kotlinx.serialization.encoding.Decoder): TemplateContents_KindVariants {
+            val surrogate = decoder.decodeSerializableValue(TemplateContents_KindVariants__Surrogate.serializer())
+            return TemplateContents_KindVariants(
+                variants = surrogate.variants,
+                defaultContent = surrogate.defaultContent,
+            )
+        }
     }
 
     // Exported as 'Spec.TemplateContent'
     @OptIn(ExperimentalSerializationApi::class)
     @Serializable
     data class TemplateContent(
-        @kotlinx.serialization.EncodeDefault val meta: JsonElement? = null,
-        @kotlinx.serialization.EncodeDefault val system: List<BodyPiece>? = null,
-        @kotlinx.serialization.EncodeDefault val user: List<BodyPiece>? = null,
-        @kotlinx.serialization.EncodeDefault val examples: List<FewShotExample>? = null,
+        @property:kotlinx.serialization.EncodeDefault val meta: JsonElement? = null,
+        @property:kotlinx.serialization.EncodeDefault val system: List<BodyPiece>? = null,
+        @property:kotlinx.serialization.EncodeDefault val user: List<BodyPiece>? = null,
+        @property:kotlinx.serialization.EncodeDefault val examples: List<FewShotExample>? = null,
     )
 
     // Exported as 'Spec.FewShotExample'
@@ -350,79 +388,140 @@ internal object Spec {
     )
 
     // Exported as 'Spec.BodyPiece'
-    @Serializable(with = BodyPiece_Serializer::class)
+    @Serializable(with = BodyPiece__Serializer::class)
     sealed interface BodyPiece
 
-    private object BodyPiece_Serializer : JsonContentPolymorphicSerializer<BodyPiece>(BodyPiece::class) {
+    private object BodyPiece__Serializer : JsonContentPolymorphicSerializer<BodyPiece>(BodyPiece::class) {
         override fun selectDeserializer(element: JsonElement): DeserializationStrategy<BodyPiece> {
             return when (val kind = element.jsonObject["kind"]?.jsonPrimitive?.contentOrNull) {
                 "text" -> BodyPiece_KindText.serializer()
                 "insert-val" -> BodyPiece_KindInsertVal.serializer()
                 "insert-snippet" -> BodyPiece_KindInsertSnippet.serializer()
-                else -> throw IllegalArgumentException("Unknown discriminant: '$kind'")
+                else -> throw IllegalArgumentException("Unknown discriminant: '${kind}'")
             }
         }
     }
 
     // Exported as 'Spec.BodyPiece_KindText'
     @OptIn(ExperimentalSerializationApi::class)
+    @Serializable(with = BodyPiece_KindText__Serializer::class)
+    @SerialName("text")
+    data class BodyPiece_KindText(
+        val text: String,
+    ) : BodyPiece
+
+    @OptIn(ExperimentalSerializationApi::class)
     @Serializable
     @SerialName("text")
-    data class BodyPiece_KindText private constructor(
-        val kind: String,
+    private data class BodyPiece_KindText__Surrogate(
+        @property:kotlinx.serialization.EncodeDefault val kind: String = "text",
         val text: String,
-    ) : BodyPiece {
-        constructor(
-            text: String,
-        ) : this(
-            kind = "text",
-            text = text,
-        )
+    )
+
+    private object BodyPiece_KindText__Serializer : kotlinx.serialization.KSerializer<BodyPiece_KindText> {
+        override val descriptor = BodyPiece_KindText__Surrogate.serializer().descriptor
+
+        override fun serialize(encoder: kotlinx.serialization.encoding.Encoder, value: BodyPiece_KindText) {
+            encoder.encodeSerializableValue(
+                BodyPiece_KindText__Surrogate.serializer(),
+                BodyPiece_KindText__Surrogate(
+                    text = value.text,
+                ),
+            )
+        }
+
+        override fun deserialize(decoder: kotlinx.serialization.encoding.Decoder): BodyPiece_KindText {
+            val surrogate = decoder.decodeSerializableValue(BodyPiece_KindText__Surrogate.serializer())
+            return BodyPiece_KindText(
+                text = surrogate.text,
+            )
+        }
     }
 
     // Exported as 'Spec.BodyPiece_KindInsertVal'
     @OptIn(ExperimentalSerializationApi::class)
-    @Serializable
+    @Serializable(with = BodyPiece_KindInsertVal__Serializer::class)
     @SerialName("insert-val")
-    data class BodyPiece_KindInsertVal private constructor(
-        val kind: String,
+    data class BodyPiece_KindInsertVal(
         val `val`: Expression,
         val format: InsertFormat,
         val indent: String,
-    ) : BodyPiece {
-        constructor(
-            `val`: Expression,
-            format: InsertFormat,
-            indent: String,
-        ) : this(
-            kind = "insert-val",
-            `val` = `val`,
-            format = format,
-            indent = indent,
-        )
+    ) : BodyPiece
+
+    @OptIn(ExperimentalSerializationApi::class)
+    @Serializable
+    @SerialName("insert-val")
+    private data class BodyPiece_KindInsertVal__Surrogate(
+        @property:kotlinx.serialization.EncodeDefault val kind: String = "insert-val",
+        @SerialName("val") val `val`: Expression,
+        val format: InsertFormat,
+        val indent: String,
+    )
+
+    private object BodyPiece_KindInsertVal__Serializer : kotlinx.serialization.KSerializer<BodyPiece_KindInsertVal> {
+        override val descriptor = BodyPiece_KindInsertVal__Surrogate.serializer().descriptor
+
+        override fun serialize(encoder: kotlinx.serialization.encoding.Encoder, value: BodyPiece_KindInsertVal) {
+            encoder.encodeSerializableValue(
+                BodyPiece_KindInsertVal__Surrogate.serializer(),
+                BodyPiece_KindInsertVal__Surrogate(
+                    `val` = value.`val`,
+                    format = value.format,
+                    indent = value.indent,
+                ),
+            )
+        }
+
+        override fun deserialize(decoder: kotlinx.serialization.encoding.Decoder): BodyPiece_KindInsertVal {
+            val surrogate = decoder.decodeSerializableValue(BodyPiece_KindInsertVal__Surrogate.serializer())
+            return BodyPiece_KindInsertVal(
+                `val` = surrogate.`val`,
+                format = surrogate.format,
+                indent = surrogate.indent,
+            )
+        }
     }
 
     // Exported as 'Spec.BodyPiece_KindInsertSnippet'
     @OptIn(ExperimentalSerializationApi::class)
-    @Serializable
+    @Serializable(with = BodyPiece_KindInsertSnippet__Serializer::class)
     @SerialName("insert-snippet")
-    data class BodyPiece_KindInsertSnippet private constructor(
-        val kind: String,
+    data class BodyPiece_KindInsertSnippet(
         /** Snippet name. */
         val snippet: String,
         /** Only contains whitespace characters. */
         val indent: String,
-    ) : BodyPiece {
-        constructor(
-            /** Snippet name. */
-            snippet: String,
-            /** Only contains whitespace characters. */
-            indent: String,
-        ) : this(
-            kind = "insert-snippet",
-            snippet = snippet,
-            indent = indent,
-        )
+    ) : BodyPiece
+
+    @OptIn(ExperimentalSerializationApi::class)
+    @Serializable
+    @SerialName("insert-snippet")
+    private data class BodyPiece_KindInsertSnippet__Surrogate(
+        @property:kotlinx.serialization.EncodeDefault val kind: String = "insert-snippet",
+        val snippet: String,
+        val indent: String,
+    )
+
+    private object BodyPiece_KindInsertSnippet__Serializer : kotlinx.serialization.KSerializer<BodyPiece_KindInsertSnippet> {
+        override val descriptor = BodyPiece_KindInsertSnippet__Surrogate.serializer().descriptor
+
+        override fun serialize(encoder: kotlinx.serialization.encoding.Encoder, value: BodyPiece_KindInsertSnippet) {
+            encoder.encodeSerializableValue(
+                BodyPiece_KindInsertSnippet__Surrogate.serializer(),
+                BodyPiece_KindInsertSnippet__Surrogate(
+                    snippet = value.snippet,
+                    indent = value.indent,
+                ),
+            )
+        }
+
+        override fun deserialize(decoder: kotlinx.serialization.encoding.Decoder): BodyPiece_KindInsertSnippet {
+            val surrogate = decoder.decodeSerializableValue(BodyPiece_KindInsertSnippet__Surrogate.serializer())
+            return BodyPiece_KindInsertSnippet(
+                snippet = surrogate.snippet,
+                indent = surrogate.indent,
+            )
+        }
     }
 
     // Exported as 'Spec.InsertFormat'
@@ -430,125 +529,200 @@ internal object Spec {
     enum class InsertFormat(val value: String) {
         @SerialName("text")
         Text("text"),
-
         @SerialName("json")
         Json("json"),
-
         @SerialName("yaml")
         Yaml("yaml"),
-
         @SerialName("toon")
         Toon("toon"),
-
         @SerialName("csv")
         Csv("csv"),
-
         @SerialName("tsv")
-        Tsv("tsv"),
-        ;
+        Tsv("tsv");
 
         override fun toString(): String = value
     }
 
     // Exported as 'Spec.Expression'
-    @Serializable(with = Expression_Serializer::class)
+    @Serializable(with = Expression__Serializer::class)
     sealed interface Expression
 
-    private object Expression_Serializer : JsonContentPolymorphicSerializer<Expression>(Expression::class) {
+    private object Expression__Serializer : JsonContentPolymorphicSerializer<Expression>(Expression::class) {
         override fun selectDeserializer(element: JsonElement): DeserializationStrategy<Expression> {
             return when (val kind = element.jsonObject["kind"]?.jsonPrimitive?.contentOrNull) {
                 "input" -> Expression_KindInput.serializer()
                 "property" -> Expression_KindProperty.serializer()
-                else -> throw IllegalArgumentException("Unknown discriminant: '$kind'")
+                else -> throw IllegalArgumentException("Unknown discriminant: '${kind}'")
             }
         }
     }
 
     // Exported as 'Spec.Expression_KindInput'
     @OptIn(ExperimentalSerializationApi::class)
+    @Serializable(with = Expression_KindInput__Serializer::class)
+    @SerialName("input")
+    class Expression_KindInput() : Expression
+
+    @OptIn(ExperimentalSerializationApi::class)
     @Serializable
     @SerialName("input")
-    data class Expression_KindInput private constructor(
-        val kind: String,
-    ) : Expression {
-        constructor() : this(
-            kind = "input",
-        )
+    private data class Expression_KindInput__Surrogate(
+        @property:kotlinx.serialization.EncodeDefault val kind: String = "input",
+    )
+
+    private object Expression_KindInput__Serializer : kotlinx.serialization.KSerializer<Expression_KindInput> {
+        override val descriptor = Expression_KindInput__Surrogate.serializer().descriptor
+
+        override fun serialize(encoder: kotlinx.serialization.encoding.Encoder, value: Expression_KindInput) {
+            encoder.encodeSerializableValue(
+                Expression_KindInput__Surrogate.serializer(),
+                Expression_KindInput__Surrogate(),
+            )
+        }
+
+        override fun deserialize(decoder: kotlinx.serialization.encoding.Decoder): Expression_KindInput {
+            val surrogate = decoder.decodeSerializableValue(Expression_KindInput__Surrogate.serializer())
+            return Expression_KindInput()
+        }
     }
 
     // Exported as 'Spec.Expression_KindProperty'
     @OptIn(ExperimentalSerializationApi::class)
-    @Serializable
+    @Serializable(with = Expression_KindProperty__Serializer::class)
     @SerialName("property")
-    data class Expression_KindProperty private constructor(
-        val kind: String,
+    data class Expression_KindProperty(
         val left: Expression,
         val property: String,
-    ) : Expression {
-        constructor(
-            left: Expression,
-            property: String,
-        ) : this(
-            kind = "property",
-            left = left,
-            property = property,
-        )
+    ) : Expression
+
+    @OptIn(ExperimentalSerializationApi::class)
+    @Serializable
+    @SerialName("property")
+    private data class Expression_KindProperty__Surrogate(
+        @property:kotlinx.serialization.EncodeDefault val kind: String = "property",
+        val left: Expression,
+        val property: String,
+    )
+
+    private object Expression_KindProperty__Serializer : kotlinx.serialization.KSerializer<Expression_KindProperty> {
+        override val descriptor = Expression_KindProperty__Surrogate.serializer().descriptor
+
+        override fun serialize(encoder: kotlinx.serialization.encoding.Encoder, value: Expression_KindProperty) {
+            encoder.encodeSerializableValue(
+                Expression_KindProperty__Surrogate.serializer(),
+                Expression_KindProperty__Surrogate(
+                    left = value.left,
+                    property = value.property,
+                ),
+            )
+        }
+
+        override fun deserialize(decoder: kotlinx.serialization.encoding.Decoder): Expression_KindProperty {
+            val surrogate = decoder.decodeSerializableValue(Expression_KindProperty__Surrogate.serializer())
+            return Expression_KindProperty(
+                left = surrogate.left,
+                property = surrogate.property,
+            )
+        }
     }
 
     // Exported as 'Spec.Snippet'
-    @Serializable(with = Snippet_Serializer::class)
+    @Serializable(with = Snippet__Serializer::class)
     sealed interface Snippet
 
-    private object Snippet_Serializer : JsonContentPolymorphicSerializer<Snippet>(Snippet::class) {
+    private object Snippet__Serializer : JsonContentPolymorphicSerializer<Snippet>(Snippet::class) {
         override fun selectDeserializer(element: JsonElement): DeserializationStrategy<Snippet> {
             return when (val kind = element.jsonObject["kind"]?.jsonPrimitive?.contentOrNull) {
                 "snippet" -> Snippet_KindSnippet.serializer()
                 "snippet-if" -> Snippet_KindSnippetIf.serializer()
                 "snippet-switch" -> Snippet_KindSnippetSwitch.serializer()
-                else -> throw IllegalArgumentException("Unknown discriminant: '$kind'")
+                else -> throw IllegalArgumentException("Unknown discriminant: '${kind}'")
             }
         }
     }
 
     // Exported as 'Spec.Snippet_KindSnippet'
     @OptIn(ExperimentalSerializationApi::class)
+    @Serializable(with = Snippet_KindSnippet__Serializer::class)
+    @SerialName("snippet")
+    data class Snippet_KindSnippet(
+        val body: List<BodyPiece>,
+    ) : Snippet
+
+    @OptIn(ExperimentalSerializationApi::class)
     @Serializable
     @SerialName("snippet")
-    data class Snippet_KindSnippet private constructor(
-        val kind: String,
+    private data class Snippet_KindSnippet__Surrogate(
+        @property:kotlinx.serialization.EncodeDefault val kind: String = "snippet",
         val body: List<BodyPiece>,
-    ) : Snippet {
-        constructor(
-            body: List<BodyPiece>,
-        ) : this(
-            kind = "snippet",
-            body = body,
-        )
+    )
+
+    private object Snippet_KindSnippet__Serializer : kotlinx.serialization.KSerializer<Snippet_KindSnippet> {
+        override val descriptor = Snippet_KindSnippet__Surrogate.serializer().descriptor
+
+        override fun serialize(encoder: kotlinx.serialization.encoding.Encoder, value: Snippet_KindSnippet) {
+            encoder.encodeSerializableValue(
+                Snippet_KindSnippet__Surrogate.serializer(),
+                Snippet_KindSnippet__Surrogate(
+                    body = value.body,
+                ),
+            )
+        }
+
+        override fun deserialize(decoder: kotlinx.serialization.encoding.Decoder): Snippet_KindSnippet {
+            val surrogate = decoder.decodeSerializableValue(Snippet_KindSnippet__Surrogate.serializer())
+            return Snippet_KindSnippet(
+                body = surrogate.body,
+            )
+        }
     }
 
     // Exported as 'Spec.Snippet_KindSnippetIf'
     @OptIn(ExperimentalSerializationApi::class)
-    @Serializable
+    @Serializable(with = Snippet_KindSnippetIf__Serializer::class)
     @SerialName("snippet-if")
-    data class Snippet_KindSnippetIf private constructor(
-        val kind: String,
+    data class Snippet_KindSnippetIf(
         val expression: Expression,
         val `is`: Snippet_KindSnippetIf_Is,
         val then: List<BodyPiece>,
         val `else`: List<BodyPiece>,
-    ) : Snippet {
-        constructor(
-            expression: Expression,
-            `is`: Snippet_KindSnippetIf_Is,
-            then: List<BodyPiece>,
-            `else`: List<BodyPiece>,
-        ) : this(
-            kind = "snippet-if",
-            expression = expression,
-            `is` = `is`,
-            then = then,
-            `else` = `else`,
-        )
+    ) : Snippet
+
+    @OptIn(ExperimentalSerializationApi::class)
+    @Serializable
+    @SerialName("snippet-if")
+    private data class Snippet_KindSnippetIf__Surrogate(
+        @property:kotlinx.serialization.EncodeDefault val kind: String = "snippet-if",
+        val expression: Expression,
+        @SerialName("is") val `is`: Snippet_KindSnippetIf_Is,
+        val then: List<BodyPiece>,
+        @SerialName("else") val `else`: List<BodyPiece>,
+    )
+
+    private object Snippet_KindSnippetIf__Serializer : kotlinx.serialization.KSerializer<Snippet_KindSnippetIf> {
+        override val descriptor = Snippet_KindSnippetIf__Surrogate.serializer().descriptor
+
+        override fun serialize(encoder: kotlinx.serialization.encoding.Encoder, value: Snippet_KindSnippetIf) {
+            encoder.encodeSerializableValue(
+                Snippet_KindSnippetIf__Surrogate.serializer(),
+                Snippet_KindSnippetIf__Surrogate(
+                    expression = value.expression,
+                    `is` = value.`is`,
+                    then = value.then,
+                    `else` = value.`else`,
+                ),
+            )
+        }
+
+        override fun deserialize(decoder: kotlinx.serialization.encoding.Decoder): Snippet_KindSnippetIf {
+            val surrogate = decoder.decodeSerializableValue(Snippet_KindSnippetIf__Surrogate.serializer())
+            return Snippet_KindSnippetIf(
+                expression = surrogate.expression,
+                `is` = surrogate.`is`,
+                then = surrogate.then,
+                `else` = surrogate.`else`,
+            )
+        }
     }
 
     // Exported as 'Spec.Snippet_KindSnippetIf_Is'
@@ -556,34 +730,52 @@ internal object Spec {
     enum class Snippet_KindSnippetIf_Is(val value: String) {
         @SerialName("not-null")
         NotNull("not-null"),
-
         @SerialName("not-empty")
         NotEmpty("not-empty"),
-
         @SerialName("true")
-        True("true"),
-        ;
+        True("true");
 
         override fun toString(): String = value
     }
 
     // Exported as 'Spec.Snippet_KindSnippetSwitch'
     @OptIn(ExperimentalSerializationApi::class)
-    @Serializable
+    @Serializable(with = Snippet_KindSnippetSwitch__Serializer::class)
     @SerialName("snippet-switch")
-    data class Snippet_KindSnippetSwitch private constructor(
-        val kind: String,
+    data class Snippet_KindSnippetSwitch(
         val expression: Expression,
         val branches: Map<String, List<BodyPiece>>,
-    ) : Snippet {
-        constructor(
-            expression: Expression,
-            branches: Map<String, List<BodyPiece>>,
-        ) : this(
-            kind = "snippet-switch",
-            expression = expression,
-            branches = branches,
-        )
+    ) : Snippet
+
+    @OptIn(ExperimentalSerializationApi::class)
+    @Serializable
+    @SerialName("snippet-switch")
+    private data class Snippet_KindSnippetSwitch__Surrogate(
+        @property:kotlinx.serialization.EncodeDefault val kind: String = "snippet-switch",
+        val expression: Expression,
+        val branches: Map<String, List<BodyPiece>>,
+    )
+
+    private object Snippet_KindSnippetSwitch__Serializer : kotlinx.serialization.KSerializer<Snippet_KindSnippetSwitch> {
+        override val descriptor = Snippet_KindSnippetSwitch__Surrogate.serializer().descriptor
+
+        override fun serialize(encoder: kotlinx.serialization.encoding.Encoder, value: Snippet_KindSnippetSwitch) {
+            encoder.encodeSerializableValue(
+                Snippet_KindSnippetSwitch__Surrogate.serializer(),
+                Snippet_KindSnippetSwitch__Surrogate(
+                    expression = value.expression,
+                    branches = value.branches,
+                ),
+            )
+        }
+
+        override fun deserialize(decoder: kotlinx.serialization.encoding.Decoder): Snippet_KindSnippetSwitch {
+            val surrogate = decoder.decodeSerializableValue(Snippet_KindSnippetSwitch__Surrogate.serializer())
+            return Snippet_KindSnippetSwitch(
+                expression = surrogate.expression,
+                branches = surrogate.branches,
+            )
+        }
     }
 
     // Exported as 'Spec.Tool'

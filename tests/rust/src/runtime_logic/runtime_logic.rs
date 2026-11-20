@@ -900,7 +900,6 @@ mod spec {
   pub(super) struct FewShotExample {
     pub(super) input: serde_json::Value,
     pub(super) output: serde_json::Value,
-    #[serde(rename = "steps")]
     pub(super) steps: Vec<FewShotExample_Steps>,
   }
 

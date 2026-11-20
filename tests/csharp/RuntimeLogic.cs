@@ -801,23 +801,24 @@ file static class Spec
 
     public sealed record Template
     {
-        [JsonPropertyName("id")]
-        public required string Id { get; init; }
+        [JsonPropertyName("name")]
+        public required string Name { get; init; }
+        [JsonPropertyName("namespace")]
+        public required string Namespace { get; init; }
         [JsonPropertyName("outputFormat")]
         public required OutputFormat OutputFormat { get; init; }
-        [JsonPropertyName("outputJsonSchema")]
-        public required JsonElement OutputJsonSchema { get; init; }
         [JsonPropertyName("tools")]
         public required IReadOnlyList<TemplateTool> Tools { get; init; }
-        [JsonPropertyName("snippets")]
-        public required IReadOnlyDictionary<string, Snippet> Snippets { get; init; }
         [JsonPropertyName("contents")]
         public required TemplateContents Contents { get; init; }
+        [JsonPropertyName("snippets")]
+        public required IReadOnlyDictionary<string, Snippet> Snippets { get; init; }
+        [JsonPropertyName("outputJsonSchema")]
+        public required JsonElement OutputJsonSchema { get; init; }
     }
 
     [JsonConverter(typeof(JsonStringEnumConverter))]
-    public enum OutputFormat
-    {
+    public enum OutputFormat {
         [JsonStringEnumMemberName("json")]
         Json,
         [JsonStringEnumMemberName("text")]
@@ -830,25 +831,24 @@ file static class Spec
         public required string Id { get; init; }
         [JsonPropertyName("name")]
         public required string Name { get; init; }
-        [JsonPropertyName("description")]
-        public required string Description { get; init; }
-        [JsonPropertyName("inputJsonSchema")]
-        public required JsonElement InputJsonSchema { get; init; }
     }
 
+    /// <summary>
+    /// Implementations: <see cref="TemplateContents_KindNoVariants"/>, <see cref="TemplateContents_KindVariants"/>.
+    /// </summary>
     [JsonConverter(typeof(TemplateContents__Converter))]
     public interface TemplateContents
-    {
-    }
+    { }
 
     internal sealed class TemplateContents__Converter : JsonConverter<TemplateContents>
     {
-        public override TemplateContents? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-        {
+        public override TemplateContents? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) {
             using var doc = JsonDocument.ParseValue(ref reader);
             var root = doc.RootElement;
             if (!root.TryGetProperty("kind", out var discElem))
+            {
                 throw new JsonException("Missing discriminator property 'kind'");
+            }
             var discriminant = discElem.GetString();
             return discriminant switch
             {
@@ -858,14 +858,14 @@ file static class Spec
             };
         }
 
-        public override void Write(Utf8JsonWriter writer, TemplateContents value, JsonSerializerOptions options)
-        {
+        public override void Write(Utf8JsonWriter writer, TemplateContents value, JsonSerializerOptions options) {
             JsonSerializer.Serialize(writer, value, value.GetType(), options);
         }
     }
 
     public sealed record TemplateContents_KindNoVariants : TemplateContents
     {
+        [JsonInclude]
         [JsonPropertyName("kind")]
         private readonly string Kind = "no-variants";
         [JsonPropertyName("content")]
@@ -874,6 +874,7 @@ file static class Spec
 
     public sealed record TemplateContents_KindVariants : TemplateContents
     {
+        [JsonInclude]
         [JsonPropertyName("kind")]
         private readonly string Kind = "variants";
         [JsonPropertyName("variants")]
@@ -885,23 +886,23 @@ file static class Spec
     public sealed record TemplateContent
     {
         [JsonPropertyName("meta")]
-        public JsonElement? Meta { get; init; }
+        public JsonElement? Meta { get; init; } = null;
         [JsonPropertyName("system")]
-        public IReadOnlyList<BodyPiece>? System { get; init; }
+        public IReadOnlyList<BodyPiece>? System { get; init; } = null;
         [JsonPropertyName("user")]
-        public IReadOnlyList<BodyPiece>? User { get; init; }
+        public IReadOnlyList<BodyPiece>? User { get; init; } = null;
         [JsonPropertyName("examples")]
-        public IReadOnlyList<FewShotExample>? Examples { get; init; }
+        public IReadOnlyList<FewShotExample>? Examples { get; init; } = null;
     }
 
     public sealed record FewShotExample
     {
         [JsonPropertyName("input")]
         public required JsonElement Input { get; init; }
-        [JsonPropertyName("steps")]
-        public required IReadOnlyList<FewShotExample_Steps> Steps { get; init; }
         [JsonPropertyName("output")]
         public required JsonElement Output { get; init; }
+        [JsonPropertyName("steps")]
+        public required IReadOnlyList<FewShotExample_Steps> Steps { get; init; }
     }
 
     public sealed record FewShotExample_Steps
@@ -914,6 +915,8 @@ file static class Spec
     {
         [JsonPropertyName("callId")]
         public required string CallId { get; init; }
+        [JsonPropertyName("toolId")]
+        public required string ToolId { get; init; }
         [JsonPropertyName("toolName")]
         public required string ToolName { get; init; }
         [JsonPropertyName("input")]
@@ -923,24 +926,21 @@ file static class Spec
     }
 
     /// <summary>
-    /// A single piece of a system, user, or snippet body template.
-    /// <para>
     /// Implementations: <see cref="BodyPiece_KindText"/>, <see cref="BodyPiece_KindInsertVal"/>, <see cref="BodyPiece_KindInsertSnippet"/>.
-    /// </para>
     /// </summary>
     [JsonConverter(typeof(BodyPiece__Converter))]
     public interface BodyPiece
-    {
-    }
+    { }
 
     internal sealed class BodyPiece__Converter : JsonConverter<BodyPiece>
     {
-        public override BodyPiece? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-        {
+        public override BodyPiece? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) {
             using var doc = JsonDocument.ParseValue(ref reader);
             var root = doc.RootElement;
             if (!root.TryGetProperty("kind", out var discElem))
+            {
                 throw new JsonException("Missing discriminator property 'kind'");
+            }
             var discriminant = discElem.GetString();
             return discriminant switch
             {
@@ -951,14 +951,14 @@ file static class Spec
             };
         }
 
-        public override void Write(Utf8JsonWriter writer, BodyPiece value, JsonSerializerOptions options)
-        {
+        public override void Write(Utf8JsonWriter writer, BodyPiece value, JsonSerializerOptions options) {
             JsonSerializer.Serialize(writer, value, value.GetType(), options);
         }
     }
 
     public sealed record BodyPiece_KindText : BodyPiece
     {
+        [JsonInclude]
         [JsonPropertyName("kind")]
         private readonly string Kind = "text";
         [JsonPropertyName("text")]
@@ -967,32 +967,36 @@ file static class Spec
 
     public sealed record BodyPiece_KindInsertVal : BodyPiece
     {
+        [JsonInclude]
         [JsonPropertyName("kind")]
         private readonly string Kind = "insert-val";
         [JsonPropertyName("val")]
         public required Expression Val { get; init; }
+        [JsonPropertyName("format")]
+        public required InsertFormat Format { get; init; }
         [JsonPropertyName("indent")]
         public required string Indent { get; init; }
-        [JsonPropertyName("format")]
-        public InsertFormat? Format { get; init; }
     }
 
     public sealed record BodyPiece_KindInsertSnippet : BodyPiece
     {
+        [JsonInclude]
         [JsonPropertyName("kind")]
         private readonly string Kind = "insert-snippet";
+        /// <summary>
+        /// Snippet name.
+        /// </summary>
         [JsonPropertyName("snippet")]
         public required string Snippet { get; init; }
+        /// <summary>
+        /// Only contains whitespace characters.
+        /// </summary>
         [JsonPropertyName("indent")]
         public required string Indent { get; init; }
     }
 
-    /// <summary>
-    /// Format specification for inserting a variable into a template body.
-    /// </summary>
     [JsonConverter(typeof(JsonStringEnumConverter))]
-    public enum InsertFormat
-    {
+    public enum InsertFormat {
         [JsonStringEnumMemberName("text")]
         Text,
         [JsonStringEnumMemberName("json")]
@@ -1008,24 +1012,21 @@ file static class Spec
     }
 
     /// <summary>
-    /// An expression that evaluates to a value given the template input.
-    /// <para>
     /// Implementations: <see cref="Expression_KindInput"/>, <see cref="Expression_KindProperty"/>.
-    /// </para>
     /// </summary>
     [JsonConverter(typeof(Expression__Converter))]
     public interface Expression
-    {
-    }
+    { }
 
     internal sealed class Expression__Converter : JsonConverter<Expression>
     {
-        public override Expression? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-        {
+        public override Expression? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) {
             using var doc = JsonDocument.ParseValue(ref reader);
             var root = doc.RootElement;
             if (!root.TryGetProperty("kind", out var discElem))
+            {
                 throw new JsonException("Missing discriminator property 'kind'");
+            }
             var discriminant = discElem.GetString();
             return discriminant switch
             {
@@ -1035,20 +1036,21 @@ file static class Spec
             };
         }
 
-        public override void Write(Utf8JsonWriter writer, Expression value, JsonSerializerOptions options)
-        {
+        public override void Write(Utf8JsonWriter writer, Expression value, JsonSerializerOptions options) {
             JsonSerializer.Serialize(writer, value, value.GetType(), options);
         }
     }
 
     public sealed record Expression_KindInput : Expression
     {
+        [JsonInclude]
         [JsonPropertyName("kind")]
         private readonly string Kind = "input";
     }
 
     public sealed record Expression_KindProperty : Expression
     {
+        [JsonInclude]
         [JsonPropertyName("kind")]
         private readonly string Kind = "property";
         [JsonPropertyName("left")]
@@ -1058,24 +1060,21 @@ file static class Spec
     }
 
     /// <summary>
-    /// A reusable body snippet, optionally with conditional or switch-based variants.
-    /// <para>
     /// Implementations: <see cref="Snippet_KindSnippet"/>, <see cref="Snippet_KindSnippetIf"/>, <see cref="Snippet_KindSnippetSwitch"/>.
-    /// </para>
     /// </summary>
     [JsonConverter(typeof(Snippet__Converter))]
     public interface Snippet
-    {
-    }
+    { }
 
     internal sealed class Snippet__Converter : JsonConverter<Snippet>
     {
-        public override Snippet? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-        {
+        public override Snippet? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) {
             using var doc = JsonDocument.ParseValue(ref reader);
             var root = doc.RootElement;
             if (!root.TryGetProperty("kind", out var discElem))
+            {
                 throw new JsonException("Missing discriminator property 'kind'");
+            }
             var discriminant = discElem.GetString();
             return discriminant switch
             {
@@ -1086,14 +1085,14 @@ file static class Spec
             };
         }
 
-        public override void Write(Utf8JsonWriter writer, Snippet value, JsonSerializerOptions options)
-        {
+        public override void Write(Utf8JsonWriter writer, Snippet value, JsonSerializerOptions options) {
             JsonSerializer.Serialize(writer, value, value.GetType(), options);
         }
     }
 
     public sealed record Snippet_KindSnippet : Snippet
     {
+        [JsonInclude]
         [JsonPropertyName("kind")]
         private readonly string Kind = "snippet";
         [JsonPropertyName("body")]
@@ -1102,6 +1101,7 @@ file static class Spec
 
     public sealed record Snippet_KindSnippetIf : Snippet
     {
+        [JsonInclude]
         [JsonPropertyName("kind")]
         private readonly string Kind = "snippet-if";
         [JsonPropertyName("expression")]
@@ -1115,18 +1115,18 @@ file static class Spec
     }
 
     [JsonConverter(typeof(JsonStringEnumConverter))]
-    public enum Snippet_KindSnippetIf_Is
-    {
-        [JsonStringEnumMemberName("not-empty")]
-        NotEmpty,
+    public enum Snippet_KindSnippetIf_Is {
         [JsonStringEnumMemberName("not-null")]
         NotNull,
+        [JsonStringEnumMemberName("not-empty")]
+        NotEmpty,
         [JsonStringEnumMemberName("true")]
         True,
     }
 
     public sealed record Snippet_KindSnippetSwitch : Snippet
     {
+        [JsonInclude]
         [JsonPropertyName("kind")]
         private readonly string Kind = "snippet-switch";
         [JsonPropertyName("expression")]
