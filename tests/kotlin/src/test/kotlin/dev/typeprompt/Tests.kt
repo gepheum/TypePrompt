@@ -934,6 +934,23 @@ class TestE01_AnalyzeSalesData {
     }
 }
 
+class TestE01_InsertOutputSchema {
+    private val prompt =
+        com.example.prompts_e01.prompts.renderInsertOutputSchema(
+            com.example.prompts_e01.Schema.InsertOutputSchema.Input(
+                topic = "AI Safety",
+            ),
+        )
+
+    @Test
+    fun testUserMessageContainsTypeScriptSchema() {
+        assertTrue(prompt.userMessage.contains("Topic: AI Safety"))
+        assertTrue(prompt.userMessage.contains("interface Output {"))
+        assertTrue(prompt.userMessage.contains("title: string"))
+        assertTrue(prompt.userMessage.contains("score: number"))
+    }
+}
+
 class TestCrossCutting_ParseResponse {
     private fun p02Render() =
         com.example.prompts02.prompts.renderTriageTicket(

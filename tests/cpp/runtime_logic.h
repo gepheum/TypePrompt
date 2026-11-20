@@ -2374,6 +2374,7 @@ struct BodyPiece;
 struct BodyPiece_KindText;
 struct BodyPiece_KindInsertVal;
 struct BodyPiece_KindInsertSnippet;
+struct BodyPiece_KindInsertSchema;
 enum class InsertFormat;
 struct Expression;
 struct Expression_KindInput;
@@ -2482,8 +2483,9 @@ inline Status ParseValue(const JsonNode&, const JsonPath&, BodyPiece_KindText&);
 
 struct BodyPiece {
  public:
-  using variant_type = std::variant<indirect<BodyPiece_KindText>, indirect<BodyPiece_KindInsertVal>,
-                                    indirect<BodyPiece_KindInsertSnippet>>;
+  using variant_type =
+      std::variant<indirect<BodyPiece_KindText>, indirect<BodyPiece_KindInsertVal>,
+                   indirect<BodyPiece_KindInsertSnippet>, indirect<BodyPiece_KindInsertSchema>>;
 
   BodyPiece() : data_(BodyPiece_KindText()) {}
   BodyPiece(variant_type data) : data_(std::move(data)) {}
@@ -2502,6 +2504,7 @@ struct BodyPiece {
     kText,
     kInsertVal,
     kInsertSnippet,
+    kInsertSchema,
   };
   kind kind() const { return static_cast<enum kind>(data_.index()); }
 
@@ -2522,6 +2525,13 @@ struct BodyPiece {
   BodyPiece_KindInsertSnippet& as_kind_insert_snippet() & { return *std::get<2>(data_); }
   indirect<BodyPiece_KindInsertSnippet> as_kind_insert_snippet() && {
     return std::move(std::get<2>(data_));
+  }
+
+  /// Precondition: kind() == BodyPiece::kind::kInsertSchema
+  const BodyPiece_KindInsertSchema& as_kind_insert_schema() const& { return *std::get<3>(data_); }
+  BodyPiece_KindInsertSchema& as_kind_insert_schema() & { return *std::get<3>(data_); }
+  indirect<BodyPiece_KindInsertSchema> as_kind_insert_schema() && {
+    return std::move(std::get<3>(data_));
   }
 
   template <typename Visitor>
@@ -2779,6 +2789,14 @@ struct BodyPiece_KindInsertSnippet {
 
 inline JsonNode ToJsonNode(const BodyPiece_KindInsertSnippet&);
 inline Status ParseValue(const JsonNode&, const JsonPath&, BodyPiece_KindInsertSnippet&);
+
+struct BodyPiece_KindInsertSchema {
+  /// Only contains whitespace characters.
+  std::string indent{};
+};
+
+inline JsonNode ToJsonNode(const BodyPiece_KindInsertSchema&);
+inline Status ParseValue(const JsonNode&, const JsonPath&, BodyPiece_KindInsertSchema&);
 
 struct Expression_KindProperty {
   Expression left{};
@@ -3180,6 +3198,10 @@ inline Status ParseValue(const JsonNode& node, const JsonPath& context, BodyPiec
     BodyPiece_KindInsertSnippet v;
     status = ParseValue(node, context, v);
     out = std::move(v);
+  } else if (*discriminant == "insert-schema") {
+    BodyPiece_KindInsertSchema v;
+    status = ParseValue(node, context, v);
+    out = std::move(v);
   } else {
     return context.MakeError(std::format("Unknown discriminant '{}'", *discriminant));
   }
@@ -3236,6 +3258,22 @@ inline Status ParseValue(const JsonNode& node, const JsonPath& context,
   internal::StructParser parser(&node, context);
   parser.Parse("indent", out.indent);
   parser.Parse("snippet", out.snippet);
+  return std::move(parser).status();
+}
+
+inline JsonNode ToJsonNode(const BodyPiece_KindInsertSchema& input) {
+  using ::typeprompt::ToJsonNode;
+  std::vector<std::pair<std::string_view, JsonNode>> entries;
+  entries.reserve(2);
+  entries.push_back({"kind", ToJsonNode("insert-schema")});
+  entries.push_back({"indent", ToJsonNode(input.indent)});
+  return internal::MakeJsonObject(std::move(entries));
+}
+
+inline Status ParseValue(const JsonNode& node, const JsonPath& context,
+                         BodyPiece_KindInsertSchema& out) {
+  internal::StructParser parser(&node, context);
+  parser.Parse("indent", out.indent);
   return std::move(parser).status();
 }
 
@@ -3717,17 +3755,22 @@ class Renderer {
     std::string user_message;
     std::vector<FewShotExample> examples;
 
+    std::string typescript_schema;
+    if (template_val.output_format.format() == spec::OutputFormat_::format::kJson) {
+      typescript_schema = template_val.output_format.as_format_json().typescript_schema;
+    }
+
     switch (contents.kind()) {
       case spec::TemplateContents::kind::kNoVariants: {
         const auto& content = contents.as_kind_no_variants().content;
         meta_element = content.meta;
         const auto& system_body =
             content.system.has_value() ? *content.system : std::vector<spec::BodyPiece>{};
-        system_message = RenderBody(system_body, input, snippets);
+        system_message = RenderBody(system_body, input, snippets, typescript_schema);
         const auto& user_body =
             content.user.has_value() ? *content.user : std::vector<spec::BodyPiece>{};
-        user_message = RenderBody(user_body, input, snippets);
-        examples = RenderExamples(content.examples, user_body, template_val);
+        user_message = RenderBody(user_body, input, snippets, typescript_schema);
+        examples = RenderExamples(content.examples, user_body, template_val, typescript_schema);
         break;
       }
       case spec::TemplateContents::kind::kVariants: {
@@ -3784,12 +3827,12 @@ class Renderer {
                 ? *variant_content.user
                 : (default_content.user.has_value() ? *default_content.user
                                                     : std::vector<spec::BodyPiece>{});
-        system_message = RenderBody(system_body, input, snippets);
-        user_message = RenderBody(user_body, input, snippets);
+        system_message = RenderBody(system_body, input, snippets, typescript_schema);
+        user_message = RenderBody(user_body, input, snippets, typescript_schema);
 
         const auto& raw_examples = variant_content.examples.has_value() ? variant_content.examples
                                                                         : default_content.examples;
-        examples = RenderExamples(raw_examples, user_body, template_val);
+        examples = RenderExamples(raw_examples, user_body, template_val, typescript_schema);
         break;
       }
     }
@@ -4034,10 +4077,11 @@ class Renderer {
   }
 
   static std::string RenderSnippet(const spec::Snippet& snippet, const JsonNode& inp,
-                                   const std::map<std::string, spec::Snippet>& snippets) {
+                                   const std::map<std::string, spec::Snippet>& snippets,
+                                   const std::string& typescript_schema) {
     switch (snippet.kind()) {
       case spec::Snippet::kind::kSnippet: {
-        return RenderBody(snippet.as_kind_snippet().body, inp, snippets);
+        return RenderBody(snippet.as_kind_snippet().body, inp, snippets, typescript_schema);
       }
       case spec::Snippet::kind::kSnippetIf: {
         const auto& snip_if = snippet.as_kind_snippet_if();
@@ -4089,7 +4133,8 @@ class Renderer {
             break;
           }
         }
-        return RenderBody(condition ? snip_if.then : snip_if.else_, inp, snippets);
+        return RenderBody(condition ? snip_if.then : snip_if.else_, inp, snippets,
+                          typescript_schema);
       }
       case spec::Snippet::kind::kSnippetSwitch: {
         const auto& snip_switch = snippet.as_kind_snippet_switch();
@@ -4117,14 +4162,15 @@ class Renderer {
           // Error: branch not found: 'switch_key'
           return {};
         }
-        return RenderBody(it->second, inp, snippets);
+        return RenderBody(it->second, inp, snippets, typescript_schema);
       }
     }
     return "";
   }
 
   static std::string RenderBody(const std::vector<spec::BodyPiece>& body, const JsonNode& inp,
-                                const std::map<std::string, spec::Snippet>& snippets) {
+                                const std::map<std::string, spec::Snippet>& snippets,
+                                const std::string& typescript_schema) {
     if (body.empty()) {
       return "";
     }
@@ -4149,8 +4195,14 @@ class Renderer {
             // Error: snippet not found: 'insert_snip.snippet'
             return {};
           }
-          std::string rendered_snippet = RenderSnippet(it->second, inp, snippets);
+          std::string rendered_snippet =
+              RenderSnippet(it->second, inp, snippets, typescript_schema);
           sb += Indent(rendered_snippet, insert_snip.indent);
+          break;
+        }
+        case spec::BodyPiece::kind::kInsertSchema: {
+          const auto& insert_schema = piece.as_kind_insert_schema();
+          sb += Indent(typescript_schema, insert_schema.indent);
           break;
         }
       }
@@ -4160,13 +4212,14 @@ class Renderer {
 
   static std::vector<FewShotExample> RenderExamples(
       const std::optional<std::vector<spec::FewShotExample>>& examples,
-      const std::vector<spec::BodyPiece>& user_body, const spec::Template& tmpl) {
+      const std::vector<spec::BodyPiece>& user_body, const spec::Template& tmpl,
+      const std::string& typescript_schema) {
     if (!examples.has_value() || examples->empty()) {
       return {};
     }
     std::vector<FewShotExample> result;
     for (const auto& ex : *examples) {
-      std::string user_message = RenderBody(user_body, ex.input, tmpl.snippets);
+      std::string user_message = RenderBody(user_body, ex.input, tmpl.snippets, typescript_schema);
 
       std::vector<StepExample> steps;
       for (const auto& step : ex.steps) {

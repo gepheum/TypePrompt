@@ -387,4 +387,63 @@ TSV:
       rendered: "Translate: good morning",
     });
   });
+
+  it("renders insert-schema piece with the typescript schema", () => {
+    const compilation = compileValid({
+      "prompts/t.tp": `<template name="T">
+  <schema>
+    type Input = { message: string; };
+    type Output = { reply: string; };
+  </schema>
+  <system>Output schema: <insert schema="Output" format="typescript"/></system>
+  <user>Message: <insert val="input.message"/></user>
+</template>`,
+      "prompts/t.play.tp": `<playground for="T">
+  <model>
+    model: openai/gpt-4o
+  </model>
+  <samples>
+    - input:
+        message: "hello"
+  </samples>
+</playground>`,
+    });
+
+    const request = renderFirstSample(compilation);
+
+    expect(request.systemMessage).toBe(
+      "Output schema: interface Output {\n  reply: string\n}",
+    );
+  });
+
+  it("indents multi-line typescript schema on insert-schema", () => {
+    const compilation = compileValid({
+      "prompts/t.tp": `<template name="T">
+  <schema>
+    type Input = { message: string; };
+    type Output = { reply: string; };
+  </schema>
+  <system>
+    Prefix:
+      Schema: <insert schema="Output" format="typescript"/>
+  </system>
+  <user>Message: <insert val="input.message"/></user>
+</template>`,
+      "prompts/t.play.tp": `<playground for="T">
+  <model>
+    model: openai/gpt-4o
+  </model>
+  <samples>
+    - input:
+        message: "hello"
+  </samples>
+</playground>`,
+    });
+
+    const request = renderFirstSample(compilation);
+
+    expect(request.systemMessage).toBe(
+      "Prefix:\n  Schema: interface Output {\n    reply: string\n  }",
+    );
+  });
 });

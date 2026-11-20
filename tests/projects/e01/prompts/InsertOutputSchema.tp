@@ -1,0 +1,22 @@
+<template name="InsertOutputSchema">
+  <schema>
+    interface Input {
+      topic: string;
+    }
+
+    interface Output {
+      title: string;
+      score: number;
+    }
+  </schema>
+
+  <system>
+    You are an evaluator.
+  </system>
+
+  <user>
+    Topic: <insert val="input.topic" />
+    Schema:
+    <insert schema="Output" format="typescript" />
+  </user>
+</template>

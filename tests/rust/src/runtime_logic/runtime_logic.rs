@@ -494,6 +494,7 @@ fn render_body(
   pieces: Option<&Vec<spec::BodyPiece>>,
   val: &serde_json::Value,
   snippets: &std::collections::HashMap<String, spec::Snippet>,
+  typescript_schema: &str,
 ) -> String {
   let pieces = match pieces {
     Some(p) => p,
@@ -514,8 +515,11 @@ fn render_body(
         let snippet = snippets
           .get(&p.snippet)
           .unwrap_or_else(|| panic!("Snippet not found: {}", p.snippet));
-        let rendered = render_snippet(snippet, val, snippets);
+        let rendered = render_snippet(snippet, val, snippets, typescript_schema);
         result.push_str(&indent(&rendered, &p.indent));
+      }
+      spec::BodyPiece::KindInsertSchema(p) => {
+        result.push_str(&indent(typescript_schema, &p.indent));
       }
     }
   }
@@ -526,9 +530,10 @@ fn render_snippet(
   snippet: &spec::Snippet,
   val: &serde_json::Value,
   snippets: &std::collections::HashMap<String, spec::Snippet>,
+  typescript_schema: &str,
 ) -> String {
   match snippet {
-    spec::Snippet::KindSnippet(s) => render_body(Some(&s.body), val, snippets),
+    spec::Snippet::KindSnippet(s) => render_body(Some(&s.body), val, snippets, typescript_schema),
     spec::Snippet::KindSnippetIf(s) => {
       let eval_result = evaluate(&s.expression, val);
       let condition = match s.is {
@@ -549,9 +554,9 @@ fn render_snippet(
         },
       };
       if condition {
-        render_body(Some(&s.then), val, snippets)
+        render_body(Some(&s.then), val, snippets, typescript_schema)
       } else {
-        render_body(Some(&s.else_), val, snippets)
+        render_body(Some(&s.else_), val, snippets, typescript_schema)
       }
     }
     spec::Snippet::KindSnippetSwitch(s) => {
@@ -566,7 +571,7 @@ fn render_snippet(
         .branches
         .get(&switch_key)
         .or_else(|| s.branches.get("default"));
-      render_body(branch, val, snippets)
+      render_body(branch, val, snippets, typescript_schema)
     }
   }
 }
@@ -575,6 +580,7 @@ fn render_examples(
   examples: Option<&Vec<spec::FewShotExample>>,
   user_body: Option<&Vec<spec::BodyPiece>>,
   template: &spec::Template,
+  typescript_schema: &str,
 ) -> Vec<FewShotExample> {
   let examples = match examples {
     Some(e) => e,
@@ -582,7 +588,12 @@ fn render_examples(
   };
   let mut result = Vec::new();
   for example in examples {
-    let rendered_user = render_body(user_body, &example.input, &template.snippets);
+    let rendered_user = render_body(
+      user_body,
+      &example.input,
+      &template.snippets,
+      typescript_schema,
+    );
     let mut steps = Vec::new();
     for step in &example.steps {
       let mut tool_calls = Vec::new();
@@ -660,9 +671,19 @@ fn do_render<Input: serde::Serialize, Output, ToolExecutor: ?Sized>(
     .as_ref()
     .or_else(|| default_content.and_then(|d| d.examples.as_ref()));
 
-  let system_message = render_body(system_body, &input_val, &template.snippets);
-  let user_message = render_body(user_body, &input_val, &template.snippets);
-  let examples = render_examples(examples_data, user_body, template);
+  let typescript_schema = match &template.output_format {
+    spec::OutputFormat::FormatJson(f) => &f.typescript_schema,
+    _ => "",
+  };
+
+  let system_message = render_body(
+    system_body,
+    &input_val,
+    &template.snippets,
+    typescript_schema,
+  );
+  let user_message = render_body(user_body, &input_val, &template.snippets, typescript_schema);
+  let examples = render_examples(examples_data, user_body, template, typescript_schema);
 
   let mut tools = std::collections::HashMap::new();
   for t in &template.tools {
@@ -1010,6 +1031,7 @@ mod spec {
     KindText(BodyPiece_KindText),
     KindInsertVal(BodyPiece_KindInsertVal),
     KindInsertSnippet(BodyPiece_KindInsertSnippet),
+    KindInsertSchema(BodyPiece_KindInsertSchema),
   }
 
   impl serde::Serialize for BodyPiece {
@@ -1021,6 +1043,7 @@ mod spec {
         BodyPiece::KindText(v) => serde::Serialize::serialize(v, serializer),
         BodyPiece::KindInsertVal(v) => serde::Serialize::serialize(v, serializer),
         BodyPiece::KindInsertSnippet(v) => serde::Serialize::serialize(v, serializer),
+        BodyPiece::KindInsertSchema(v) => serde::Serialize::serialize(v, serializer),
       }
     }
   }
@@ -1050,9 +1073,14 @@ mod spec {
             <BodyPiece_KindInsertSnippet>::deserialize(value).map_err(serde::de::Error::custom)?;
           Ok(BodyPiece::KindInsertSnippet(v))
         }
+        "insert-schema" => {
+          let v =
+            <BodyPiece_KindInsertSchema>::deserialize(value).map_err(serde::de::Error::custom)?;
+          Ok(BodyPiece::KindInsertSchema(v))
+        }
         other => Err(serde::de::Error::unknown_variant(
           other,
-          &["text", "insert-val", "insert-snippet"],
+          &["text", "insert-val", "insert-snippet", "insert-schema"],
         )),
       }
     }
@@ -1114,6 +1142,25 @@ mod spec {
         serde::Serializer::serialize_struct(serializer, "BodyPiece_KindInsertSnippet", 3)?;
       serde::ser::SerializeStruct::serialize_field(&mut state, "kind", &"insert-snippet")?;
       serde::ser::SerializeStruct::serialize_field(&mut state, "snippet", &self.snippet)?;
+      serde::ser::SerializeStruct::serialize_field(&mut state, "indent", &self.indent)?;
+      serde::ser::SerializeStruct::end(state)
+    }
+  }
+
+  #[derive(Clone, serde::Deserialize, Debug, PartialEq)]
+  pub(super) struct BodyPiece_KindInsertSchema {
+    /// Only contains whitespace characters.
+    pub(super) indent: String,
+  }
+
+  impl serde::Serialize for BodyPiece_KindInsertSchema {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+      S: serde::Serializer,
+    {
+      let mut state =
+        serde::Serializer::serialize_struct(serializer, "BodyPiece_KindInsertSchema", 2)?;
+      serde::ser::SerializeStruct::serialize_field(&mut state, "kind", &"insert-schema")?;
       serde::ser::SerializeStruct::serialize_field(&mut state, "indent", &self.indent)?;
       serde::ser::SerializeStruct::end(state)
     }

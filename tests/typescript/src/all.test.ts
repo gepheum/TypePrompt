@@ -883,6 +883,16 @@ describe("e01 / AnalyzeSalesData", () => {
   });
 });
 
+describe("e01 / InsertOutputSchema", () => {
+  it("renders the output typescript schema in userMessage", () => {
+    const prompt = pe01.insertOutputSchema.render({ topic: "AI Safety" });
+    expect(prompt.userMessage).toMatch(/Topic:\s*AI Safety/);
+    expect(prompt.userMessage).toMatch(/interface Output {/);
+    expect(prompt.userMessage).toMatch(/title: string/);
+    expect(prompt.userMessage).toMatch(/score: number/);
+  });
+});
+
 // ─── Cross-cutting: parseResponse code fence stripping ───────────────────────
 
 describe("parseResponse", () => {

@@ -91,6 +91,11 @@ export type BodyPiece =
       readonly snippet: string;
       /** Only contains whitespace characters. */
       readonly indent: string;
+    }
+  | {
+      readonly kind: "insert-schema";
+      /** Only contains whitespace characters. */
+      readonly indent: string;
     };
 
 export type InsertFormat = "text" | "json" | "yaml" | "toon" | "csv" | "tsv";

@@ -706,6 +706,8 @@ sealed class _Spec_BodyPiece {
         return _Spec_BodyPiece_KindInsertVal.fromJson(json);
       case "insert-snippet":
         return _Spec_BodyPiece_KindInsertSnippet.fromJson(json);
+      case "insert-schema":
+        return _Spec_BodyPiece_KindInsertSchema.fromJson(json);
       default:
         throw FormatException("Unknown discriminator: ${json['kind']}");
     }
@@ -804,6 +806,34 @@ final class _Spec_BodyPiece_KindInsertSnippet implements _Spec_BodyPiece {
       Map<String, dynamic> json) {
     return _Spec_BodyPiece_KindInsertSnippet(
       snippet: json["snippet"],
+      indent: json["indent"],
+    );
+  }
+}
+
+final class _Spec_BodyPiece_KindInsertSchema implements _Spec_BodyPiece {
+  /// Only contains whitespace characters.
+  final String indent;
+
+  _Spec_BodyPiece_KindInsertSchema({
+    required this.indent,
+  });
+
+  @override
+  Map<String, dynamic> toJson() {
+    return {
+      "kind": "insert-schema",
+      "indent": indent,
+    };
+  }
+
+  @override
+  String toString() {
+    return JsonEncoder.withIndent("  ").convert(toJson());
+  }
+
+  factory _Spec_BodyPiece_KindInsertSchema.fromJson(Map<String, dynamic> json) {
+    return _Spec_BodyPiece_KindInsertSchema(
       indent: json["indent"],
     );
   }
@@ -1253,6 +1283,7 @@ String _renderBody(
   List<_Spec_BodyPiece>? body,
   dynamic inp,
   Map<String, _Spec_Snippet> snippets,
+  String typescriptSchema,
 ) {
   if (body == null || body.isEmpty) return '';
   final sb = StringBuffer();
@@ -1269,8 +1300,11 @@ String _renderBody(
         if (snippet == null) {
           throw ArgumentError('Snippet not found: ${piece.snippet}');
         }
-        final renderedSnippet = _renderSnippet(snippet, inp, snippets);
+        final renderedSnippet =
+            _renderSnippet(snippet, inp, snippets, typescriptSchema);
         sb.write(_indent(renderedSnippet, piece.indent));
+      case _Spec_BodyPiece_KindInsertSchema():
+        sb.write(_indent(typescriptSchema, piece.indent));
     }
   }
   return sb.toString();
@@ -1280,10 +1314,11 @@ String _renderSnippet(
   _Spec_Snippet snippet,
   dynamic inp,
   Map<String, _Spec_Snippet> snippets,
+  String typescriptSchema,
 ) {
   switch (snippet) {
     case _Spec_Snippet_KindSnippet():
-      return _renderBody(snippet.body, inp, snippets);
+      return _renderBody(snippet.body, inp, snippets, typescriptSchema);
     case _Spec_Snippet_KindSnippetIf():
       final evalResult = _evaluate(snippet.expression, inp);
       bool condition;
@@ -1311,8 +1346,8 @@ String _renderSnippet(
             condition = evalResult != null;
           }
       }
-      return _renderBody(
-          condition ? snippet.then : snippet.else_, inp, snippets);
+      return _renderBody(condition ? snippet.then : snippet.else_, inp,
+          snippets, typescriptSchema);
     case _Spec_Snippet_KindSnippetSwitch():
       final switchVal = _evaluate(snippet.expression, inp);
       final switchKey = switchVal is bool
@@ -1322,7 +1357,7 @@ String _renderSnippet(
       if (branch == null) {
         throw ArgumentError('Branch not found: $switchKey');
       }
-      return _renderBody(branch, inp, snippets);
+      return _renderBody(branch, inp, snippets, typescriptSchema);
   }
 }
 
@@ -1330,13 +1365,15 @@ UnmodifiableListView<FewShotExample> _renderExamples(
   List<_Spec_FewShotExample>? examples,
   List<_Spec_BodyPiece>? userBody,
   _Spec_Template tmpl,
+  String typescriptSchema,
 ) {
   if (examples == null || examples.isEmpty) {
     return UnmodifiableListView<FewShotExample>(const []);
   }
   final result = <FewShotExample>[];
   for (final ex in examples) {
-    final userMessage = _renderBody(userBody, ex.input, tmpl.snippets);
+    final userMessage =
+        _renderBody(userBody, ex.input, tmpl.snippets, typescriptSchema);
 
     final steps = <StepExample>[];
     for (final step in ex.steps) {
@@ -1392,6 +1429,10 @@ Prompt<Output, ToolExecutor> _doRender<Output, ToolExecutor>(
 
   final snippets = template.snippets;
   final contents = template.contents;
+  final typescriptSchema = switch (template.outputFormat) {
+    _Spec_OutputFormat_FormatJson(:final typescriptSchema) => typescriptSchema,
+    _ => '',
+  };
 
   dynamic metaElement;
   String systemMessage;
@@ -1402,10 +1443,12 @@ Prompt<Output, ToolExecutor> _doRender<Output, ToolExecutor>(
     case _Spec_TemplateContents_KindNoVariants():
       final content = contents.content;
       metaElement = content.meta;
-      systemMessage = _renderBody(content.system, input, snippets);
+      systemMessage =
+          _renderBody(content.system, input, snippets, typescriptSchema);
       final userBody = content.user ?? const [];
-      userMessage = _renderBody(userBody, input, snippets);
-      examples = _renderExamples(content.examples, userBody, template);
+      userMessage = _renderBody(userBody, input, snippets, typescriptSchema);
+      examples = _renderExamples(
+          content.examples, userBody, template, typescriptSchema);
     case _Spec_TemplateContents_KindVariants():
       if (input is! Map) {
         throw ArgumentError('Input for template with variants must be a map');
@@ -1424,10 +1467,12 @@ Prompt<Output, ToolExecutor> _doRender<Output, ToolExecutor>(
       final systemBody =
           variantContent.system ?? defaultContent.system ?? const [];
       final userBody = variantContent.user ?? defaultContent.user ?? const [];
-      systemMessage = _renderBody(systemBody, input, snippets);
-      userMessage = _renderBody(userBody, input, snippets);
+      systemMessage =
+          _renderBody(systemBody, input, snippets, typescriptSchema);
+      userMessage = _renderBody(userBody, input, snippets, typescriptSchema);
       final rawExamples = variantContent.examples ?? defaultContent.examples;
-      examples = _renderExamples(rawExamples, userBody, template);
+      examples =
+          _renderExamples(rawExamples, userBody, template, typescriptSchema);
   }
 
   final tools = <String, Tool>{};

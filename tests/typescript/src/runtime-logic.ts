@@ -408,11 +408,20 @@ function renderTemplate<Id extends TemplateId>(
   let systemMessage: string;
   let userMessage: string;
   let examples: readonly FewShotExample[];
+  const typescriptSchema =
+    template.outputFormat.format === "json"
+      ? template.outputFormat.typescriptSchema
+      : "";
   if (contents.kind === "no-variants") {
     const { content } = contents;
     meta = content.meta as Meta;
-    systemMessage = renderBody(content.system!, input, snippets);
-    userMessage = renderBody(content.user!, input, snippets);
+    systemMessage = renderBody(
+      content.system!,
+      input,
+      snippets,
+      typescriptSchema,
+    );
+    userMessage = renderBody(content.user!, input, snippets, typescriptSchema);
     examples = renderExamples(
       content.examples!,
       content.user!,
@@ -426,8 +435,8 @@ function renderTemplate<Id extends TemplateId>(
     meta = (variantContent.meta ?? defaultContent.meta) as Meta;
     const system = (variantContent.system ?? defaultContent.system)!;
     const user = (variantContent.user ?? defaultContent.user)!;
-    systemMessage = renderBody(system, input, snippets);
-    userMessage = renderBody(user, input, snippets);
+    systemMessage = renderBody(system, input, snippets, typescriptSchema);
+    userMessage = renderBody(user, input, snippets, typescriptSchema);
     examples = renderExamples(
       (variantContent.examples ?? defaultContent.examples)!,
       user,
@@ -493,6 +502,7 @@ function renderBody<Input>(
   body: Spec.Body,
   input: Input,
   snippets: { readonly [c: string]: Spec.Snippet },
+  typescriptSchema: string,
 ): string {
   const renderPiece = (piece: Spec.BodyPiece): string => {
     switch (piece.kind) {
@@ -504,11 +514,17 @@ function renderBody<Input>(
         if (!snippet) {
           throw new Error(`Snippet not found: ${piece.snippet}`);
         }
-        return indent(renderSnippet(snippet, input, snippets), piece.indent);
+        return indent(
+          renderSnippet(snippet, input, snippets, typescriptSchema),
+          piece.indent,
+        );
       }
       case "insert-val": {
         const val = evaluate(input, piece.val);
         return indent(format(val, piece.format), piece.indent);
+      }
+      case "insert-schema": {
+        return indent(typescriptSchema, piece.indent);
       }
     }
   };
@@ -519,10 +535,11 @@ function renderSnippet<Input>(
   snippet: Spec.Snippet,
   input: Input,
   snippets: { readonly [c: string]: Spec.Snippet },
+  typescriptSchema: string,
 ): string {
   switch (snippet.kind) {
     case "snippet": {
-      return renderBody(snippet.body, input, snippets);
+      return renderBody(snippet.body, input, snippets, typescriptSchema);
     }
     case "snippet-if": {
       const { expression, then: thenBody, else: elseBody } = snippet;
@@ -541,7 +558,7 @@ function renderSnippet<Input>(
         }
       })();
       const body = condition ? thenBody : elseBody;
-      return renderBody(body, input, snippets);
+      return renderBody(body, input, snippets, typescriptSchema);
     }
     case "snippet-switch": {
       const { expression, branches } = snippet;
@@ -550,7 +567,7 @@ function renderSnippet<Input>(
       if (!branch) {
         throw new Error(`Branch not found: ${evalResult as string}`);
       }
-      return renderBody(branch, input, snippets);
+      return renderBody(branch, input, snippets, typescriptSchema);
     }
   }
 }
@@ -581,8 +598,12 @@ function renderExamples(
   template: Spec.Template,
   tools: { [id: string]: Spec.Tool },
 ): readonly FewShotExample[] {
+  const typescriptSchema =
+    template.outputFormat.format === "json"
+      ? template.outputFormat.typescriptSchema
+      : "";
   return inputs.map(({ input, output, steps }) => ({
-    userMessage: renderBody(body, input, template.snippets),
+    userMessage: renderBody(body, input, template.snippets, typescriptSchema),
     steps: steps.map((step) => ({
       toolCalls: step.toolCalls.map((tc) => ({
         callId: tc.callId,

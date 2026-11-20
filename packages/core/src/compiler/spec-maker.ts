@@ -281,6 +281,10 @@ function makeBody<HasValContext extends boolean>(
         break;
       }
       case "insert-schema": {
+        pieces.push({
+          kind: "insert-schema",
+          indent: piece.indent,
+        });
         break;
       }
       default: {

@@ -595,6 +595,33 @@ describe("makeTemplates - body pieces", () => {
       },
     });
   });
+
+  it("converts 'insert-schema' pieces", () => {
+    const result = {
+      ...emptyResult(),
+      templates: {
+        "Main:T": templateWithUserBody([
+          {
+            kind: "insert-schema",
+            schema: span("Output"),
+            indent: "",
+            tag: { start: 0, end: 0, path: "" },
+          },
+        ]),
+      },
+    } as unknown as ValidCompilationResult;
+    expect(makeTemplates(result)).toMatch({
+      templates: {
+        "Main:T": {
+          contents: {
+            content: {
+              user: [{ kind: "insert-schema", indent: "" }],
+            },
+          },
+        },
+      },
+    });
+  });
 });
 
 // ---------------------------------------------------------------------------

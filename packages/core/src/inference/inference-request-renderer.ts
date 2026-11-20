@@ -59,10 +59,15 @@ export function renderInferenceRequest(
     specTemplate.contents,
     normalizedSampleInput,
   );
+  const typescriptSchema =
+    specTemplate.outputFormat.format === "json"
+      ? specTemplate.outputFormat.typescriptSchema
+      : "";
   const systemMessage = renderBody(
     mainContent.system,
     normalizedSampleInput,
     specTemplate.snippets,
+    typescriptSchema,
   );
 
   const tools: readonly Inferences.Tool[] = specTemplate.tools.map(
@@ -111,6 +116,7 @@ export function renderInferenceRequest(
         exampleContent.user,
         normalizedExampleInput,
         specTemplate.snippets,
+        typescriptSchema,
       ),
     });
 
@@ -164,6 +170,7 @@ export function renderInferenceRequest(
         historyContent.user,
         normalizedHistoryInput,
         specTemplate.snippets,
+        typescriptSchema,
       ),
     });
 
@@ -207,6 +214,7 @@ export function renderInferenceRequest(
       mainContent.user,
       normalizedSampleInput,
       specTemplate.snippets,
+      typescriptSchema,
     ),
   });
 
@@ -271,6 +279,7 @@ function renderBody<Input>(
   body: Spec.Body,
   input: Input,
   snippets: { readonly [c: string]: Spec.Snippet },
+  typescriptSchema: string,
 ): string {
   const renderPiece = (piece: Spec.BodyPiece): string => {
     switch (piece.kind) {
@@ -282,11 +291,17 @@ function renderBody<Input>(
         if (!snippet) {
           throw new Error(`Snippet not found: ${piece.snippet}`);
         }
-        return indent(renderSnippet(snippet, input, snippets), piece.indent);
+        return indent(
+          renderSnippet(snippet, input, snippets, typescriptSchema),
+          piece.indent,
+        );
       }
       case "insert-val": {
         const val = evaluate(input, piece.val);
         return indent(format(val, piece.format), piece.indent);
+      }
+      case "insert-schema": {
+        return indent(typescriptSchema, piece.indent);
       }
     }
   };
@@ -297,10 +312,11 @@ function renderSnippet<Input>(
   snippet: Spec.Snippet,
   input: Input,
   snippets: { readonly [c: string]: Spec.Snippet },
+  typescriptSchema: string,
 ): string {
   switch (snippet.kind) {
     case "snippet": {
-      return renderBody(snippet.body, input, snippets);
+      return renderBody(snippet.body, input, snippets, typescriptSchema);
     }
     case "snippet-if": {
       const { expression, then: thenBody, else: elseBody } = snippet;
@@ -319,7 +335,7 @@ function renderSnippet<Input>(
         }
       })();
       const body = condition ? thenBody : elseBody;
-      return renderBody(body, input, snippets);
+      return renderBody(body, input, snippets, typescriptSchema);
     }
     case "snippet-switch": {
       const { expression, branches } = snippet;
@@ -328,7 +344,7 @@ function renderSnippet<Input>(
       if (!branch) {
         throw new Error(`Branch not found: ${evalResult as string}`);
       }
-      return renderBody(branch, input, snippets);
+      return renderBody(branch, input, snippets, typescriptSchema);
     }
   }
 }

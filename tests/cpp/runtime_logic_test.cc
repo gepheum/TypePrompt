@@ -3972,6 +3972,16 @@ void TestE01_AnalyzeSalesData() {
             "A\t120\t240000\tnorth\nWidget B\t85\t340000\tsouth\nWidget C\t200\t180000\teast");
 }
 
+void TestE01_InsertOutputSchema() {
+  auto prompt = typeprompt_e01::Render<typeprompt_e01::templates::InsertOutputSchema>({
+      .topic = "AI Safety",
+  });
+  ASSERT_TRUE(prompt.user_message.find("Topic: AI Safety") != std::string::npos);
+  ASSERT_TRUE(prompt.user_message.find("interface Output {") != std::string::npos);
+  ASSERT_TRUE(prompt.user_message.find("title: string") != std::string::npos);
+  ASSERT_TRUE(prompt.user_message.find("score: number") != std::string::npos);
+}
+
 void TestCrossCutting_ParseResponse() {
   // testParsesPlainJsonWithoutFences
   auto res_plain = typeprompt_02::ParseResponse<typeprompt_02::templates::TriageTicket>(
@@ -4507,6 +4517,7 @@ void TestRuntimeLogic() {
   Test06SharedTypes();
   Test07Namespaces();
   TestE01_AnalyzeSalesData();
+  TestE01_InsertOutputSchema();
   TestCrossCutting_ParseResponse();
   TestE01_JsonSerialization();
   TestTemplateOverrider();

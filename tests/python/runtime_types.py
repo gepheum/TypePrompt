@@ -140,6 +140,7 @@ class _internal:
             _internal.BodyPiece_KindText,
             _internal.BodyPiece_KindInsertVal,
             _internal.BodyPiece_KindInsertSnippet,
+            _internal.BodyPiece_KindInsertSchema,
         ],
         pydantic.Field(discriminator="kind"),
     ]
@@ -158,6 +159,11 @@ class _internal:
         kind: Literal["insert-snippet"]
         # Snippet name.
         snippet: str
+        # Only contains whitespace characters.
+        indent: str
+
+    class BodyPiece_KindInsertSchema(pydantic.BaseModel):
+        kind: Literal["insert-schema"]
         # Only contains whitespace characters.
         indent: str
 

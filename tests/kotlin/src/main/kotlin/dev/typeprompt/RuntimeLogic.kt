@@ -486,6 +486,7 @@ internal object Spec {
                 "text" -> BodyPiece_KindText.serializer()
                 "insert-val" -> BodyPiece_KindInsertVal.serializer()
                 "insert-snippet" -> BodyPiece_KindInsertSnippet.serializer()
+                "insert-schema" -> BodyPiece_KindInsertSchema.serializer()
                 else -> throw IllegalArgumentException("Unknown discriminant: '${kind}'")
             }
         }
@@ -608,6 +609,43 @@ internal object Spec {
             val surrogate = decoder.decodeSerializableValue(BodyPiece_KindInsertSnippet__Surrogate.serializer())
             return BodyPiece_KindInsertSnippet(
                 snippet = surrogate.snippet,
+                indent = surrogate.indent,
+            )
+        }
+    }
+
+    // Exported as 'Spec.BodyPiece_KindInsertSchema'
+    @OptIn(ExperimentalSerializationApi::class)
+    @Serializable(with = BodyPiece_KindInsertSchema__Serializer::class)
+    @SerialName("insert-schema")
+    data class BodyPiece_KindInsertSchema(
+        /** Only contains whitespace characters. */
+        val indent: String,
+    ) : BodyPiece
+
+    @OptIn(ExperimentalSerializationApi::class)
+    @Serializable
+    @SerialName("insert-schema")
+    private data class BodyPiece_KindInsertSchema__Surrogate(
+        @property:kotlinx.serialization.EncodeDefault val kind: String = "insert-schema",
+        val indent: String,
+    )
+
+    private object BodyPiece_KindInsertSchema__Serializer : kotlinx.serialization.KSerializer<BodyPiece_KindInsertSchema> {
+        override val descriptor = BodyPiece_KindInsertSchema__Surrogate.serializer().descriptor
+
+        override fun serialize(encoder: kotlinx.serialization.encoding.Encoder, value: BodyPiece_KindInsertSchema) {
+            encoder.encodeSerializableValue(
+                BodyPiece_KindInsertSchema__Surrogate.serializer(),
+                BodyPiece_KindInsertSchema__Surrogate(
+                    indent = value.indent,
+                ),
+            )
+        }
+
+        override fun deserialize(decoder: kotlinx.serialization.encoding.Decoder): BodyPiece_KindInsertSchema {
+            val surrogate = decoder.decodeSerializableValue(BodyPiece_KindInsertSchema__Surrogate.serializer())
+            return BodyPiece_KindInsertSchema(
                 indent = surrogate.indent,
             )
         }
@@ -1101,6 +1139,7 @@ private fun renderBody(
     body: List<Spec.BodyPiece>?,
     inp: Any?,
     snippets: Map<String, Spec.Snippet>,
+    typescriptSchema: String,
 ): String {
     if (body == null || body.isEmpty()) {
         return ""
@@ -1122,8 +1161,12 @@ private fun renderBody(
                 val snippet =
                     snippets[piece.snippet]
                         ?: throw IllegalArgumentException("Snippet not found: ${piece.snippet}")
-                val renderedSnippet = renderSnippet(snippet, inp, snippets)
+                val renderedSnippet = renderSnippet(snippet, inp, snippets, typescriptSchema)
                 sb.append(indent(renderedSnippet, piece.indent))
+            }
+
+            is Spec.BodyPiece_KindInsertSchema -> {
+                sb.append(indent(typescriptSchema, piece.indent))
             }
         }
     }
@@ -1134,10 +1177,11 @@ private fun renderSnippet(
     snippet: Spec.Snippet,
     inp: Any?,
     snippets: Map<String, Spec.Snippet>,
+    typescriptSchema: String,
 ): String {
     when (snippet) {
         is Spec.Snippet_KindSnippet -> {
-            return renderBody(snippet.body, inp, snippets)
+            return renderBody(snippet.body, inp, snippets, typescriptSchema)
         }
 
         is Spec.Snippet_KindSnippetIf -> {
@@ -1168,7 +1212,7 @@ private fun renderSnippet(
                         }
                     }
                 }
-            return renderBody(if (condition) snippet.then else snippet.`else`, inp, snippets)
+            return renderBody(if (condition) snippet.then else snippet.`else`, inp, snippets, typescriptSchema)
         }
 
         is Spec.Snippet_KindSnippetSwitch -> {
@@ -1181,7 +1225,7 @@ private fun renderSnippet(
             val branch =
                 snippet.branches[switchKey]
                     ?: throw IllegalArgumentException("Branch not found: $switchKey")
-            return renderBody(branch, inp, snippets)
+            return renderBody(branch, inp, snippets, typescriptSchema)
         }
     }
 }
@@ -1190,6 +1234,7 @@ private fun renderExamples(
     examples: List<Spec.FewShotExample>?,
     userBody: List<Spec.BodyPiece>?,
     tmpl: Spec.Template,
+    typescriptSchema: String,
 ): List<FewShotExample> {
     if (examples == null || examples.isEmpty()) {
         return emptyList()
@@ -1198,7 +1243,7 @@ private fun renderExamples(
     for (ex in examples) {
         val exInputObj = jsonElementToObject(ex.input)
         val exOutputObj = jsonElementToObject(ex.output)
-        val userMessage = renderBody(userBody, exInputObj, tmpl.snippets)
+        val userMessage = renderBody(userBody, exInputObj, tmpl.snippets, typescriptSchema)
 
         val steps = mutableListOf<StepExample>()
         for (step in ex.steps) {
@@ -1250,6 +1295,11 @@ private inline fun <reified Input, reified Output, ToolExecutor> doRender(
 
     val snippets = template.snippets
     val contents = template.contents
+    val typescriptSchema =
+        when (val outputFormat = template.outputFormat) {
+            is Spec.OutputFormat_FormatJson -> outputFormat.typescriptSchema
+            else -> ""
+        }
 
     val metaElement: JsonElement?
     val systemMessage: String
@@ -1260,10 +1310,10 @@ private inline fun <reified Input, reified Output, ToolExecutor> doRender(
         is Spec.TemplateContents_KindNoVariants -> {
             val content = contents.content
             metaElement = content.meta
-            systemMessage = renderBody(content.system, inputObj, snippets)
+            systemMessage = renderBody(content.system, inputObj, snippets, typescriptSchema)
             val userBody = content.user ?: emptyList()
-            userMessage = renderBody(userBody, inputObj, snippets)
-            examples = renderExamples(content.examples, userBody, template)
+            userMessage = renderBody(userBody, inputObj, snippets, typescriptSchema)
+            examples = renderExamples(content.examples, userBody, template, typescriptSchema)
         }
 
         is Spec.TemplateContents_KindVariants -> {
@@ -1282,10 +1332,10 @@ private inline fun <reified Input, reified Output, ToolExecutor> doRender(
             metaElement = variantContent.meta ?: defaultContent.meta
             val systemBody = variantContent.system ?: defaultContent.system ?: emptyList()
             val userBody = variantContent.user ?: defaultContent.user ?: emptyList()
-            systemMessage = renderBody(systemBody, inputObj, snippets)
-            userMessage = renderBody(userBody, inputObj, snippets)
+            systemMessage = renderBody(systemBody, inputObj, snippets, typescriptSchema)
+            userMessage = renderBody(userBody, inputObj, snippets, typescriptSchema)
             val rawExamples = variantContent.examples ?: defaultContent.examples
-            examples = renderExamples(rawExamples, userBody, template)
+            examples = renderExamples(rawExamples, userBody, template, typescriptSchema)
         }
     }
 

@@ -724,6 +724,19 @@ mod tests {
     assert!(tsv.system_message.contains("tab-separated"));
   }
 
+  #[test]
+  fn test_e01_insert_output_schema() {
+    let prompt = gen::prompts_e01::PROMPTS.render_insert_output_schema(
+      &gen::prompts_e01::schema::insert_output_schema::Input {
+        topic: "AI Safety".to_string(),
+      },
+    );
+    assert!(prompt.user_message.contains("Topic: AI Safety"));
+    assert!(prompt.user_message.contains("interface Output {"));
+    assert!(prompt.user_message.contains("title: string"));
+    assert!(prompt.user_message.contains("score: number"));
+  }
+
   // ─── E01 Spec Serialization ─────────────────────────────────────────────────
 
   use gen::prompts_e01::schema::analyze_sales_data::Input_Variant;

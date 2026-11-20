@@ -732,6 +732,22 @@ struct E01AnalyzeSalesDataTests {
   }
 }
 
+@Suite("E01 InsertOutputSchema")
+struct E01InsertOutputSchemaTests {
+  let prompt = TypePrompt.prompts.renderInsertOutputSchema(
+    TypePrompt.Schema.InsertOutputSchema.Input(
+      topic: "AI Safety"
+    )
+  )
+
+  @Test func userMessageContainsTypeScriptSchema() {
+    #expect(prompt.userMessage.contains("Topic: AI Safety"))
+    #expect(prompt.userMessage.contains("interface Output {"))
+    #expect(prompt.userMessage.contains("title: string"))
+    #expect(prompt.userMessage.contains("score: number"))
+  }
+}
+
 @Suite("E01 Spec Serialization")
 struct E01SpecSerializationTests {
   @Test func exprSerializationAndDeserialization() throws {

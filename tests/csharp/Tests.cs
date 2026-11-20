@@ -965,6 +965,24 @@ public class TestE01_AnalyzeSalesData
     }
 }
 
+public class TestE01_InsertOutputSchema
+{
+    private readonly TypePrompt.Prompt<TypePrompt.Schema.InsertOutputSchema.Output, TypePrompt.NoTools> _prompt =
+        TypePrompt.Prompts.Default.RenderInsertOutputSchema(new TypePrompt.Schema.InsertOutputSchema.Input
+        {
+            Topic = "AI Safety"
+        });
+
+    [Fact]
+    public void TestUserMessageContainsTypeScriptSchema()
+    {
+        Assert.Contains("Topic: AI Safety", _prompt.UserMessage);
+        Assert.Contains("interface Output {", _prompt.UserMessage);
+        Assert.Contains("title: string", _prompt.UserMessage);
+        Assert.Contains("score: number", _prompt.UserMessage);
+    }
+}
+
 public class TestCrossCutting_ParseResponse
 {
     private static TypePrompt02.Prompt<TypePrompt02.Schema.TriageTicket.Output, TypePrompt02.NoTools> P02Render() =>

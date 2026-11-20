@@ -638,6 +638,7 @@ public enum TypePromptRuntime {
       case kindText(BodyPiece_KindText)
       case kindInsertVal(BodyPiece_KindInsertVal)
       case kindInsertSnippet(BodyPiece_KindInsertSnippet)
+      case kindInsertSchema(BodyPiece_KindInsertSchema)
 
       public func encode(to encoder: any Encoder) throws {
         var container = encoder.singleValueContainer()
@@ -647,6 +648,8 @@ public enum TypePromptRuntime {
         case .kindInsertVal(let value):
           try container.encode(value)
         case .kindInsertSnippet(let value):
+          try container.encode(value)
+        case .kindInsertSchema(let value):
           try container.encode(value)
         }
       }
@@ -665,6 +668,8 @@ public enum TypePromptRuntime {
           self = .kindInsertVal(try BodyPiece_KindInsertVal(from: decoder))
         case "insert-snippet":
           self = .kindInsertSnippet(try BodyPiece_KindInsertSnippet(from: decoder))
+        case "insert-schema":
+          self = .kindInsertSchema(try BodyPiece_KindInsertSchema(from: decoder))
         default:
           throw DecodingError.dataCorrupted(
             DecodingError.Context(
@@ -719,6 +724,19 @@ public enum TypePromptRuntime {
       ) {
         self.kind = "insert-snippet"
         self.snippet = snippet
+        self.indent = indent
+      }
+    }
+
+    public struct BodyPiece_KindInsertSchema: Codable, Sendable {
+      public let kind: String
+      /// Only contains whitespace characters.
+      public let indent: String
+
+      public init(
+        indent: String,
+      ) {
+        self.kind = "insert-schema"
         self.indent = indent
       }
     }
@@ -1344,6 +1362,7 @@ public enum TypePromptRuntime {
     _ body: [Spec.BodyPiece]?,
     _ inp: Any?,
     _ snippets: [String: Spec.Snippet],
+    _ typescriptSchema: String,
   ) -> String {
     guard let body = body, !body.isEmpty else { return "" }
     var result = ""
@@ -1359,8 +1378,10 @@ public enum TypePromptRuntime {
         guard let snippet = snippets[p.snippet] else {
           fatalError("Snippet not found: \(p.snippet)")
         }
-        let rendered = renderSnippet(snippet, inp, snippets)
+        let rendered = renderSnippet(snippet, inp, snippets, typescriptSchema)
         result += indent(rendered, p.indent)
+      case .kindInsertSchema(let p):
+        result += indent(typescriptSchema, p.indent)
       }
     }
     return result
@@ -1370,10 +1391,11 @@ public enum TypePromptRuntime {
     _ snippet: Spec.Snippet,
     _ inp: Any?,
     _ snippets: [String: Spec.Snippet],
+    _ typescriptSchema: String,
   ) -> String {
     switch snippet {
     case .kindSnippet(let s):
-      return renderBody(s.body, inp, snippets)
+      return renderBody(s.body, inp, snippets, typescriptSchema)
     case .kindSnippetIf(let s):
       let evalResult = evaluate(s.expression, inp)
       var condition = false
@@ -1403,7 +1425,7 @@ public enum TypePromptRuntime {
           condition = evalResult != nil
         }
       }
-      return renderBody(condition ? s.then : s.else, inp, snippets)
+      return renderBody(condition ? s.then : s.else, inp, snippets, typescriptSchema)
     case .kindSnippetSwitch(let s):
       let switchVal = evaluate(s.expression, inp)
       let switchKey: String
@@ -1417,7 +1439,7 @@ public enum TypePromptRuntime {
       guard let branch = s.branches[switchKey] else {
         fatalError("Branch not found: \(switchKey)")
       }
-      return renderBody(branch, inp, snippets)
+      return renderBody(branch, inp, snippets, typescriptSchema)
     }
   }
 
@@ -1425,13 +1447,14 @@ public enum TypePromptRuntime {
     _ examples: [Spec.FewShotExample]?,
     _ userBody: [Spec.BodyPiece]?,
     _ tmpl: Spec.Template,
+    _ typescriptSchema: String,
   ) -> [FewShotExample] {
     guard let examples = examples, !examples.isEmpty else { return [] }
     var result = [FewShotExample]()
     for ex in examples {
       let exInputObj = jsonElementToObject(ex.input)
       let exOutputObj = jsonElementToObject(ex.output)
-      let userMessage = renderBody(userBody, exInputObj, tmpl.snippets)
+      let userMessage = renderBody(userBody, exInputObj, tmpl.snippets, typescriptSchema)
 
       var steps = [StepExample]()
       for step in ex.steps {
@@ -1490,14 +1513,22 @@ public enum TypePromptRuntime {
     var userMessage: String = ""
     var examples: [FewShotExample] = []
 
+    let typescriptSchema: String
+    switch template.outputFormat {
+    case .formatJson(let jsonFormat):
+      typescriptSchema = jsonFormat.typescriptSchema
+    case .formatText:
+      typescriptSchema = ""
+    }
+
     switch contents {
     case .kindNoVariants(let noVariants):
       let content = noVariants.content
       metaElement = content.meta
-      systemMessage = renderBody(content.system, inputObj, snippets)
+      systemMessage = renderBody(content.system, inputObj, snippets, typescriptSchema)
       let userBody = content.user ?? []
-      userMessage = renderBody(userBody, inputObj, snippets)
-      examples = renderExamples(content.examples, userBody, template)
+      userMessage = renderBody(userBody, inputObj, snippets, typescriptSchema)
+      examples = renderExamples(content.examples, userBody, template, typescriptSchema)
     case .kindVariants(let variants):
       guard let inputDict = inputObj as? [String: Any],
         let variant = inputDict["variant"] as? String
@@ -1512,10 +1543,10 @@ public enum TypePromptRuntime {
       metaElement = variantContent.meta ?? defaultContent.meta
       let systemBody = variantContent.system ?? defaultContent.system ?? []
       let userBody = variantContent.user ?? defaultContent.user ?? []
-      systemMessage = renderBody(systemBody, inputObj, snippets)
-      userMessage = renderBody(userBody, inputObj, snippets)
+      systemMessage = renderBody(systemBody, inputObj, snippets, typescriptSchema)
+      userMessage = renderBody(userBody, inputObj, snippets, typescriptSchema)
       let rawExamples = variantContent.examples ?? defaultContent.examples
-      examples = renderExamples(rawExamples, userBody, template)
+      examples = renderExamples(rawExamples, userBody, template, typescriptSchema)
     }
 
     let meta: Meta

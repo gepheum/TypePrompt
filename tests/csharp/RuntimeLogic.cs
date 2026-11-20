@@ -367,14 +367,18 @@ file class SpecRenderer(Spec.Templates spec) : IRenderer
         string userMessage;
         IReadOnlyList<FewShotExample> examples;
 
+        var typescriptSchema = template.OutputFormat is Spec.OutputFormat_FormatJson jsonFormat
+            ? jsonFormat.TypescriptSchema
+            : "";
+
         if (contents is Spec.TemplateContents_KindNoVariants noVariants)
         {
             var content = noVariants.Content;
             metaElement = content.Meta;
-            systemMessage = RenderBody(content.System, inputObj, snippets);
+            systemMessage = RenderBody(content.System, inputObj, snippets, typescriptSchema);
             var userBody = content.User ?? Array.Empty<Spec.BodyPiece>();
-            userMessage = RenderBody(userBody, inputObj, snippets);
-            examples = RenderExamples(content.Examples, userBody, template);
+            userMessage = RenderBody(userBody, inputObj, snippets, typescriptSchema);
+            examples = RenderExamples(content.Examples, userBody, template, typescriptSchema);
         }
         else
         {
@@ -387,10 +391,10 @@ file class SpecRenderer(Spec.Templates spec) : IRenderer
             metaElement = variantContent.Meta ?? defaultContent.Meta;
             var systemBody = variantContent.System ?? defaultContent.System ?? Array.Empty<Spec.BodyPiece>();
             var userBody = variantContent.User ?? defaultContent.User ?? Array.Empty<Spec.BodyPiece>();
-            systemMessage = RenderBody(systemBody, inputObj, snippets);
-            userMessage = RenderBody(userBody, inputObj, snippets);
+            systemMessage = RenderBody(systemBody, inputObj, snippets, typescriptSchema);
+            userMessage = RenderBody(userBody, inputObj, snippets, typescriptSchema);
             var rawExamples = variantContent.Examples ?? defaultContent.Examples;
-            examples = RenderExamples(rawExamples, userBody, template);
+            examples = RenderExamples(rawExamples, userBody, template, typescriptSchema);
         }
 
         var meta = MetaParser.Parse(metaElement);
@@ -580,7 +584,8 @@ file class SpecRenderer(Spec.Templates spec) : IRenderer
     private static string RenderBody(
         IReadOnlyList<Spec.BodyPiece>? body,
         object? inp,
-        IReadOnlyDictionary<string, Spec.Snippet> snippets
+        IReadOnlyDictionary<string, Spec.Snippet> snippets,
+        string typescriptSchema
     )
     {
         if (body == null || body.Count == 0)
@@ -605,8 +610,13 @@ file class SpecRenderer(Spec.Templates spec) : IRenderer
                 case Spec.BodyPiece_KindInsertSnippet insertSnippetPiece:
                     {
                         var snippet = snippets[insertSnippetPiece.Snippet];
-                        var renderedSnippet = RenderSnippet(snippet, inp, snippets);
+                        var renderedSnippet = RenderSnippet(snippet, inp, snippets, typescriptSchema);
                         sb.Append(Indent(renderedSnippet, insertSnippetPiece.Indent));
+                        break;
+                    }
+                case Spec.BodyPiece_KindInsertSchema insertSchemaPiece:
+                    {
+                        sb.Append(Indent(typescriptSchema, insertSchemaPiece.Indent));
                         break;
                     }
                 default:
@@ -619,13 +629,14 @@ file class SpecRenderer(Spec.Templates spec) : IRenderer
     private static string RenderSnippet(
         Spec.Snippet snippet,
         object? inp,
-        IReadOnlyDictionary<string, Spec.Snippet> snippets
+        IReadOnlyDictionary<string, Spec.Snippet> snippets,
+        string typescriptSchema
     )
     {
         switch (snippet)
         {
             case Spec.Snippet_KindSnippet kindSnippet:
-                return RenderBody(kindSnippet.Body, inp, snippets);
+                return RenderBody(kindSnippet.Body, inp, snippets, typescriptSchema);
             case Spec.Snippet_KindSnippetIf snippetIf:
                 {
                     var evalResult = Evaluate(snippetIf.Expression, inp);
@@ -664,13 +675,13 @@ file class SpecRenderer(Spec.Templates spec) : IRenderer
                         default:
                             throw new ArgumentOutOfRangeException();
                     }
-                    return RenderBody(condition ? snippetIf.Then : snippetIf.Else, inp, snippets);
+                    return RenderBody(condition ? snippetIf.Then : snippetIf.Else, inp, snippets, typescriptSchema);
                 }
             case Spec.Snippet_KindSnippetSwitch snippetSwitch:
                 {
                     var switchVal = Evaluate(snippetSwitch.Expression, inp);
                     var switchKey = switchVal is bool boolVal ? (boolVal ? "true" : "false") : switchVal?.ToString() ?? "";
-                    return RenderBody(snippetSwitch.Branches[switchKey], inp, snippets);
+                    return RenderBody(snippetSwitch.Branches[switchKey], inp, snippets, typescriptSchema);
                 }
             default:
                 {
@@ -682,7 +693,8 @@ file class SpecRenderer(Spec.Templates spec) : IRenderer
     private static IReadOnlyList<FewShotExample> RenderExamples(
         IReadOnlyList<Spec.FewShotExample>? examples,
         IReadOnlyList<Spec.BodyPiece>? userBody,
-        Spec.Template tmpl
+        Spec.Template tmpl,
+        string typescriptSchema
     )
     {
         if (examples == null || examples.Count == 0)
@@ -692,7 +704,7 @@ file class SpecRenderer(Spec.Templates spec) : IRenderer
         {
             var exInputObj = JsonElementToObject(ex.Input);
             var exOutputObj = JsonElementToObject(ex.Output);
-            var userMessage = RenderBody(userBody, exInputObj, tmpl.Snippets);
+            var userMessage = RenderBody(userBody, exInputObj, tmpl.Snippets, typescriptSchema);
 
             var steps = new List<StepExample>();
             foreach (var step in ex.Steps)
@@ -986,7 +998,7 @@ file static class Spec
     }
 
     /// <summary>
-    /// Implementations: <see cref="BodyPiece_KindText"/>, <see cref="BodyPiece_KindInsertVal"/>, <see cref="BodyPiece_KindInsertSnippet"/>.
+    /// Implementations: <see cref="BodyPiece_KindText"/>, <see cref="BodyPiece_KindInsertVal"/>, <see cref="BodyPiece_KindInsertSnippet"/>, <see cref="BodyPiece_KindInsertSchema"/>.
     /// </summary>
     [JsonConverter(typeof(BodyPiece__Converter))]
     public interface BodyPiece
@@ -1007,6 +1019,7 @@ file static class Spec
                 "text" => JsonSerializer.Deserialize<BodyPiece_KindText>(root, options),
                 "insert-val" => JsonSerializer.Deserialize<BodyPiece_KindInsertVal>(root, options),
                 "insert-snippet" => JsonSerializer.Deserialize<BodyPiece_KindInsertSnippet>(root, options),
+                "insert-schema" => JsonSerializer.Deserialize<BodyPiece_KindInsertSchema>(root, options),
                 _ => throw new JsonException($"Unknown discriminant value '{discriminant}'")
             };
         }
@@ -1048,6 +1061,18 @@ file static class Spec
         /// </summary>
         [JsonPropertyName("snippet")]
         public required string Snippet { get; init; }
+        /// <summary>
+        /// Only contains whitespace characters.
+        /// </summary>
+        [JsonPropertyName("indent")]
+        public required string Indent { get; init; }
+    }
+
+    public sealed record BodyPiece_KindInsertSchema : BodyPiece
+    {
+        [JsonInclude]
+        [JsonPropertyName("kind")]
+        private readonly string Kind = "insert-schema";
         /// <summary>
         /// Only contains whitespace characters.
         /// </summary>

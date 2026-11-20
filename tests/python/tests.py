@@ -138,6 +138,18 @@ class TestAnalyzeSalesData:
         )
 
 
+class TestInsertOutputSchema:
+    prompt = pe01.insert_output_schema.render(
+        s_e01.insert_output_schema.Input(topic="AI Safety")
+    )
+
+    def test_user_message_contains_typescript_schema(self):
+        assert "Topic: AI Safety" in self.prompt.user_message
+        assert "interface Output {" in self.prompt.user_message
+        assert "title: string" in self.prompt.user_message
+        assert "score: number" in self.prompt.user_message
+
+
 # ─── 01 Basics: text output, <enclosed>, examples ────────────────────────────
 
 

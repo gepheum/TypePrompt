@@ -86,6 +86,11 @@ type BodyPiece =
       snippet: string;
       /** Only contains whitespace characters. */
       indent: string;
+    }
+  | {
+      kind: "insert-schema";
+      /** Only contains whitespace characters. */
+      indent: string;
     };
 
 type InsertFormat = "text" | "json" | "yaml" | "toon" | "csv" | "tsv";

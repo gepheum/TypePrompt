@@ -466,6 +466,7 @@ class _TemplateImpl[Input, Output, ToolExecutor]:
             body: Sequence[_internal.BodyPiece],
             inp: Any,
             snippets: Mapping[str, _internal.Snippet],
+            typescript_schema: str,
         ) -> str:
             parts: list[str] = []
             for piece in body:
@@ -484,18 +485,26 @@ class _TemplateImpl[Input, Output, ToolExecutor]:
                         if snippet is None:
                             raise ValueError(f"Snippet not found: {piece.snippet}")
                         parts.append(
-                            indent(render_snippet(snippet, inp, snippets), piece.indent)
+                            indent(
+                                render_snippet(
+                                    snippet, inp, snippets, typescript_schema
+                                ),
+                                piece.indent,
+                            )
                         )
+                    case "insert-schema":
+                        parts.append(indent(typescript_schema, piece.indent))
             return "".join(parts)
 
         def render_snippet(
             snippet: _internal.Snippet,
             inp: Any,
             snippets: Mapping[str, _internal.Snippet],
+            typescript_schema: str,
         ) -> str:
             match snippet.kind:
                 case "snippet":
-                    return render_body(snippet.body, inp, snippets)
+                    return render_body(snippet.body, inp, snippets, typescript_schema)
                 case "snippet-if":
                     eval_result = evaluate(snippet.expression, inp)
                     match snippet.is_:
@@ -506,25 +515,31 @@ class _TemplateImpl[Input, Output, ToolExecutor]:
                         case "true":
                             condition = bool(eval_result)
                     return render_body(
-                        snippet.then if condition else snippet.else_, inp, snippets
+                        snippet.then if condition else snippet.else_,
+                        inp,
+                        snippets,
+                        typescript_schema,
                     )
                 case "snippet-switch":
                     eval_result = evaluate(snippet.expression, inp)
                     branch = snippet.branches.get(str(eval_result))
                     if branch is None:
                         raise ValueError(f"Branch not found: {eval_result}")
-                    return render_body(branch, inp, snippets)
+                    return render_body(branch, inp, snippets, typescript_schema)
 
         def render_examples(
             examples: Sequence[_internal.FewShotExample],
             user_body: Sequence[_internal.BodyPiece],
             tmpl: _internal.Template,
+            typescript_schema: str,
         ) -> Sequence[FewShotExample]:
             result = []
             for ex in examples:
                 result.append(
                     FewShotExample(
-                        user_message=render_body(user_body, ex.input, tmpl.snippets),
+                        user_message=render_body(
+                            user_body, ex.input, tmpl.snippets, typescript_schema
+                        ),
                         steps=[
                             StepExample(
                                 tool_calls=[
@@ -551,14 +566,25 @@ class _TemplateImpl[Input, Output, ToolExecutor]:
         template = self._template_data
         snippets = template.snippets
         contents = template.contents
+        typescript_schema = (
+            template.output_format.typescript_schema
+            if template.output_format.format == "json"
+            else ""
+        )
 
         if contents.kind == "no-variants":
             content = contents.content
             meta = _meta_type_adapter.validate_python(content.meta, by_alias=True)
-            system_message = render_body(content.system or [], input_val, snippets)
+            system_message = render_body(
+                content.system or [], input_val, snippets, typescript_schema
+            )
             user_body = content.user or []
-            user_message = render_body(user_body, input_val, snippets)
-            examples = render_examples(content.examples or [], user_body, template)
+            user_message = render_body(
+                user_body, input_val, snippets, typescript_schema
+            )
+            examples = render_examples(
+                content.examples or [], user_body, template, typescript_schema
+            )
         else:
             variant = cast(dict, input_val)["variant"]
             variant_content = contents.variants[variant]
@@ -579,14 +605,20 @@ class _TemplateImpl[Input, Output, ToolExecutor]:
                 if variant_content.user is not None
                 else (default_content.user or [])
             )
-            system_message = render_body(system_body, input_val, snippets)
-            user_message = render_body(user_body, input_val, snippets)
+            system_message = render_body(
+                system_body, input_val, snippets, typescript_schema
+            )
+            user_message = render_body(
+                user_body, input_val, snippets, typescript_schema
+            )
             raw_examples = (
                 variant_content.examples
                 if variant_content.examples is not None
                 else (default_content.examples or [])
             )
-            examples = render_examples(raw_examples, user_body, template)
+            examples = render_examples(
+                raw_examples, user_body, template, typescript_schema
+            )
 
         def make_tool(tool_spec: _internal.TemplateTool) -> Tool:
             input_adapter, output_adapter = _type_adapters[tool_spec.id]

@@ -753,6 +753,21 @@ void main() {
     });
   });
 
+  group('E01 InsertOutputSchema', () {
+    final prompt = pe01.prompts.renderInsertOutputSchema(
+      pe01.InsertOutputSchema_Input(
+        topic: "AI Safety",
+      ),
+    );
+
+    test('userMessage contains typescript schema', () {
+      expect(prompt.userMessage, contains("Topic: AI Safety"));
+      expect(prompt.userMessage, contains("interface Output {"));
+      expect(prompt.userMessage, contains("title: string"));
+      expect(prompt.userMessage, contains("score: number"));
+    });
+  });
+
   group('E01 Spec Serialization', () {
     test('Expr serialization & deserialization', () {
       final num = pe01.Shared_Expr_KindNumber(value: 42.0);
