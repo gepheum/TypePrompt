@@ -188,7 +188,7 @@ export const CONFIG: SchemaType = {
 };
 
 export const DEFAULT_CONFIG_YAML = [
-  "# TypePrompt configuration. Run 'bunx @typeprompt/cli gen' to generate code.",
+  "# TypePrompt configuration. Run 'npx @typeprompt/cli gen' to generate code.",
   "# Docs: https://typeprompt.dev",
   "",
   "include:",

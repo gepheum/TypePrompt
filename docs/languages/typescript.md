@@ -28,7 +28,7 @@ gen:
 Generate the TypeScript code:
 
 ```bash
-bunx @typeprompt/cli gen
+npx @typeprompt/cli gen
 ```
 
 ---

@@ -34,7 +34,7 @@ export async function initializeProject(projectDir: string): Promise<void> {
     console.log(`Template already exists: ${helloWorldPath}`);
   }
 
-  console.log("Done. Run: bunx @typeprompt/cli gen");
+  console.log("Done. Run: npx @typeprompt/cli gen");
 }
 
 export const HELLO_WORLD_TEMPLATE = `

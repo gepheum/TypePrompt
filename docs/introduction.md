@@ -38,7 +38,7 @@ TypeScript, Python, Kotlin, Rust, C++, Swift, Dart, C# (*more languages to come*
 **Tooling**
 
 - **[CLI](/cli)**: Code generation, watch mode, and a built-in formatter.
-- **Editor support**: VS Code extension and a standalone Language Server (`bunx @typeprompt/language-server`).
+- **Editor support**: VS Code extension and a standalone Language Server (`npx @typeprompt/language-server`).
 
 ## Comparison with other tools
 

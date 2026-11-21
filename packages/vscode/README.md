@@ -66,7 +66,7 @@ TypePrompt lets you write prompt templates with TypeScript-based schemas, tools,
 </template>
 ```
 
-`bunx @typeprompt/cli gen` compiles your templates into native code:
+`npx @typeprompt/cli gen` compiles your templates into native code:
 
 ```typescript
 // MyApp.ts
@@ -93,8 +93,8 @@ If your application code and your templates drift apart, your compiler or type c
 
 ## Getting started
 
-1. Run `bunx @typeprompt/cli init` in your project root.
+1. Run `npx @typeprompt/cli init` in your project root.
 2. Configure your target language in `typeprompt.yaml`.
-3. Run `bunx @typeprompt/cli gen` (or `--watch` for automatic regeneration).
+3. Run `npx @typeprompt/cli gen` (or `--watch` for automatic regeneration).
 
 See the [Quick start guide](https://typeprompt.dev/quick-start) and [Playground docs](https://typeprompt.dev/playground) to learn more.

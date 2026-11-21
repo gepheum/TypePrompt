@@ -33,7 +33,7 @@ A command-line translation tool built with Kotlin, TypePrompt, and the official 
 To generate the typed prompt code from your XML template:
 
 ```bash
-bunx @typeprompt/cli gen
+npx @typeprompt/cli gen
 ```
 
 This generates `src/main/kotlin/gen/Prompts.kt` containing the `prompts.renderTranslate()` function and typed `Schema.Translate.Input` / `Output` definitions.

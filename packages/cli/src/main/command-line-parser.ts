@@ -92,7 +92,7 @@ export function parseCommandLine(args: string[]): ParsedArgs {
   }
 }
 
-const COMMAND_BASE = "bunx @typeprompt/cli";
+const COMMAND_BASE = "npx @typeprompt/cli";
 
 const HELP_TEXT = `
 Usage: ${COMMAND_BASE} <command> [options]

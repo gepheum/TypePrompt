@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 
 const copied = ref(false)
-const command = 'bunx @typeprompt/cli init'
+const command = 'npx @typeprompt/cli init'
 
 function copy() {
   if (typeof navigator !== 'undefined' && navigator.clipboard) {
@@ -20,7 +20,7 @@ function copy() {
     class="hero-quickstart-pill"
     role="button"
     tabindex="0"
-    aria-label="Copy bunx @typeprompt/cli init to clipboard"
+    aria-label="Copy npx @typeprompt/cli init to clipboard"
     @click="copy"
     @keydown.enter.prevent="copy"
     @keydown.space.prevent="copy"

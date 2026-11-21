@@ -30,7 +30,7 @@ gen:
 Generate the C# code:
 
 ```bash
-bunx @typeprompt/cli gen
+npx @typeprompt/cli gen
 ```
 
 ---

@@ -35,7 +35,7 @@ gen:
 Generate the Rust code:
 
 ```bash
-bunx @typeprompt/cli gen
+npx @typeprompt/cli gen
 ```
 
 ---

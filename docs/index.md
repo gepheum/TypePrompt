@@ -464,7 +464,7 @@ Prompt templates are plain XML files that bring together prompt instructions, ty
 
 :::
 
-<p class="code-intro"><code>bunx @typeprompt/cli gen</code> compiles your templates into a type-safe API in your target language. Here's how you use it:</p>
+<p class="code-intro"><code>npx @typeprompt/cli gen</code> compiles your templates into a type-safe API in your target language. Here's how you use it:</p>
 
 ::: code-group
 

@@ -34,7 +34,7 @@ gen:
 Generate the Swift code:
 
 ```bash
-bunx @typeprompt/cli gen
+npx @typeprompt/cli gen
 ```
 
 ---

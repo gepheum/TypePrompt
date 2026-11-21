@@ -33,7 +33,7 @@ gen:
 Generate the Dart code:
 
 ```bash
-bunx @typeprompt/cli gen
+npx @typeprompt/cli gen
 ```
 
 ---
