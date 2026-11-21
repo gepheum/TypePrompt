@@ -182,7 +182,8 @@ export default defineConfig({
     ],
 
     footer: {
-      copyright: "Copyright © 2026-present TypePrompt",
+      message: "Made with 🩷 in New York and outer space",
+      copyright: "Released under the MIT License · Copyright © 2026 Gepheum Lab",
     },
 
     editLink: {
