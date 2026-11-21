@@ -472,19 +472,19 @@ Prompt templates are plain XML files that bring together prompt instructions, ty
 // MyApp.ts
 
 import { prompts } from "./gen/prompts.js";
+import { executePrompt } from "./llm.js";
 
-// 1. Resolve the prompt template with typed input
+// 1. Render the prompt template with strongly-typed input
 const prompt = prompts.decodeCatMood.render({
   catAction: "Sit on keyboard",
   bowlStatus: "half-empty",
 });
 
-// 2. Send prompt to LLM using your preferred SDK.
-// The prompt provides system and user messages, tools,
-// few-shot examples, and the response's JSON Schema.
+// 2. Send it via your own generic helper wrapping any LLM SDK.
+// It forwards the rendered messages, tools, examples, and JSON Schema,
+// calls prompt.parseResponse(...), and returns the strongly-typed output.
+const result = await executePrompt(prompt);
 
-// 3. Parse the LLM response into strongly-typed output
-const result = prompt.parseResponse(rawResponse);
 console.log(result.humanAction);
 // "Surrender warm laptop and apologize for trying to work."
 ```
@@ -493,8 +493,9 @@ console.log(result.humanAction);
 # my_app.py
 
 from my_app.generated.prompts import prompts, schema
+from my_app.llm import execute_prompt
 
-# 1. Resolve the prompt template with typed input
+# 1. Render the prompt template with strongly-typed input
 prompt = prompts.decode_cat_mood.render(
     schema.decode_cat_mood.Input(
         cat_action="Sit on keyboard",
@@ -502,12 +503,11 @@ prompt = prompts.decode_cat_mood.render(
     )
 )
 
-# 2. Send prompt to LLM using your preferred SDK.
-# The prompt provides system and user messages, tools,
-# few-shot examples, and the response's JSON Schema.
+# 2. Send it via your own generic helper wrapping any LLM SDK.
+# It forwards the rendered messages, tools, examples, and JSON Schema,
+# calls prompt.parse_response(...), and returns the strongly-typed output.
+result = await execute_prompt(prompt)
 
-# 3. Parse the LLM response into strongly-typed output
-result = prompt.parse_response(raw_response)
 print(result.human_action)
 # "Surrender warm laptop and apologize for trying to work."
 ```
@@ -517,8 +517,9 @@ print(result.human_action)
 
 import ai.myapp.generated.prompts.prompts
 import ai.myapp.generated.prompts.Schema.DecodeCatMood
+import ai.myapp.llm.executePrompt
 
-// 1. Resolve the prompt template with typed input
+// 1. Render the prompt template with strongly-typed input
 val prompt = prompts.renderDecodeCatMood(
     DecodeCatMood.Input(
         catAction = "Sit on keyboard",
@@ -526,12 +527,11 @@ val prompt = prompts.renderDecodeCatMood(
     )
 )
 
-// 2. Send prompt to LLM using your preferred SDK.
-// The prompt provides system and user messages, tools,
-// few-shot examples, and the response's JSON Schema.
+// 2. Send it via your own generic helper wrapping any LLM SDK.
+// It forwards the rendered messages, tools, examples, and JSON Schema,
+// calls prompt.parseResponse(...), and returns the strongly-typed output.
+val result = executePrompt(prompt)
 
-// 3. Parse the LLM response into strongly-typed output
-val result = prompt.parseResponse(rawResponse)
 println(result.humanAction)
 // "Surrender warm laptop and apologize for trying to work."
 ```
@@ -539,20 +539,20 @@ println(result.humanAction)
 ```rust [Rust]
 // my_app.rs
 
+use crate::llm::execute_prompt;
 use my_app::gen::prompts::{schema, PROMPTS};
 
-// 1. Resolve the prompt template with typed input
+// 1. Render the prompt template with strongly-typed input
 let prompt = PROMPTS.render_decode_cat_mood(&schema::decode_cat_mood::Input {
     cat_action: "Sit on keyboard".to_string(),
     bowl_status: schema::decode_cat_mood::Input_BowlStatus::HalfEmpty,
 });
 
-// 2. Send prompt to LLM using your preferred SDK.
-// The prompt provides system and user messages, tools,
-// few-shot examples, and the response's JSON Schema.
+// 2. Send it via your own generic helper wrapping any LLM SDK.
+// It forwards the rendered messages, tools, examples, and JSON Schema,
+// calls prompt.parse_response(...), and returns the strongly-typed output.
+let result = execute_prompt(&prompt).await?;
 
-// 3. Parse the LLM response into strongly-typed output
-let result = prompt.parse_response(raw_response)?;
 println!("{}", result.human_action);
 // "Surrender warm laptop and apologize for trying to work."
 ```
@@ -561,23 +561,23 @@ println!("{}", result.human_action);
 // my_app.cc
 
 #include "gen/prompts.h"
+#include "llm.h"
 #include <iostream>
 
 using namespace typeprompt;
 using Template = templates::DecodeCatMood;
 
-// 1. Resolve the prompt template with typed input
+// 1. Render the prompt template with strongly-typed input
 auto prompt = Render<Template>({
     .cat_action = "Sit on keyboard",
     .bowl_status = schema::decode_cat_mood::Input_BowlStatus::kHalfEmpty,
 });
 
-// 2. Send prompt to LLM using your preferred SDK.
-// The prompt provides system and user messages, tools,
-// few-shot examples, and the response's JSON Schema.
+// 2. Send it via your own generic helper wrapping any LLM SDK.
+// It forwards the rendered messages, tools, examples, and JSON Schema,
+// calls ParseResponse<Template>(...), and returns the strongly-typed output.
+auto result = ExecutePrompt<Template>(prompt);
 
-// 3. Parse the LLM response into strongly-typed output
-auto result = ParseResponse<Template>(raw_response);
 std::cout << result->human_action << "\n";
 // "Surrender warm laptop and apologize for trying to work."
 ```
@@ -587,7 +587,7 @@ std::cout << result->human_action << "\n";
 
 import MyPrompts
 
-// 1. Resolve the prompt template with typed input
+// 1. Render the prompt template with strongly-typed input
 let prompt = prompts.renderDecodeCatMood(
     Schema.DecodeCatMood.Input(
         catAction: "Sit on keyboard",
@@ -595,12 +595,11 @@ let prompt = prompts.renderDecodeCatMood(
     )
 )
 
-// 2. Send prompt to LLM using your preferred SDK.
-// The prompt provides system and user messages, tools,
-// few-shot examples, and the response's JSON Schema.
+// 2. Send it via your own generic helper wrapping any LLM SDK.
+// It forwards the rendered messages, tools, examples, and JSON Schema,
+// calls prompt.parseResponse(...), and returns the strongly-typed output.
+let result = try await executePrompt(prompt)
 
-// 3. Parse the LLM response into strongly-typed output
-let result = try prompt.parseResponse(rawResponse)
 print(result.humanAction)
 // "Surrender warm laptop and apologize for trying to work."
 ```
@@ -609,8 +608,9 @@ print(result.humanAction)
 // my_app.dart
 
 import 'package:my_app/gen/prompts.dart';
+import 'package:my_app/llm.dart';
 
-// 1. Resolve the prompt template with typed input
+// 1. Render the prompt template with strongly-typed input
 final prompt = prompts.renderDecodeCatMood(
   DecodeCatMood_Input(
     catAction: "Sit on keyboard",
@@ -618,12 +618,11 @@ final prompt = prompts.renderDecodeCatMood(
   ),
 );
 
-// 2. Send prompt to LLM using your preferred SDK.
-// The prompt provides system and user messages, tools,
-// few-shot examples, and the response's JSON Schema.
+// 2. Send it via your own generic helper wrapping any LLM SDK.
+// It forwards the rendered messages, tools, examples, and JSON Schema,
+// calls prompt.parseResponse(...), and returns the strongly-typed output.
+final result = await executePrompt(prompt);
 
-// 3. Parse the LLM response into strongly-typed output
-final result = prompt.parseResponse(rawResponse);
 print(result.humanAction);
 // "Surrender warm laptop and apologize for trying to work."
 ```
@@ -631,21 +630,21 @@ print(result.humanAction);
 ```csharp [C#]
 // MyApp.cs
 
+using MyApp.Llm;
 using MyApp.Prompts;
 
-// 1. Resolve the prompt template with typed input
+// 1. Render the prompt template with strongly-typed input
 var prompt = Prompts.Default.RenderDecodeCatMood(new Schema.DecodeCatMood.Input
 {
     CatAction = "Sit on keyboard",
     BowlStatus = Schema.DecodeCatMood.Input_BowlStatus.HalfEmpty
 });
 
-// 2. Send prompt to LLM using your preferred SDK.
-// The prompt provides system and user messages, tools,
-// few-shot examples, and the response's JSON Schema.
+// 2. Send it via your own generic helper wrapping any LLM SDK.
+// It forwards the rendered messages, tools, examples, and JSON Schema,
+// calls prompt.ParseResponse(...), and returns the strongly-typed output.
+var result = await LlmClient.ExecutePrompt(prompt);
 
-// 3. Parse the LLM response into strongly-typed output
-var result = prompt.ParseResponse(rawResponse);
 Console.WriteLine(result.HumanAction);
 // "Surrender warm laptop and apologize for trying to work."
 ```
