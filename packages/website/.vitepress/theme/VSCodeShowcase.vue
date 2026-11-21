@@ -11,8 +11,8 @@
         playsinline
         preload="auto"
         class="vscode-video"
-        width="2640"
-        height="1600"
+        width="2662"
+        height="1498"
       >
         <source src="/vscode-demo.webm" type="video/webm" />
         <source src="/vscode-demo.mp4" type="video/mp4" />
