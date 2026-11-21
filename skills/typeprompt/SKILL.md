@@ -1,6 +1,6 @@
 ---
 name: typeprompt
-description: Author, format, compile, test, and integrate TypePrompt (.tp) prompt templates, schemas, tools, playground files (.play.tp), and typeprompt.yaml configuration across TypeScript, Python, Kotlin, Rust, C++, Swift, Dart, and C#. Use whenever working with .tp files, typeprompt.yaml, npx typeprompt, or generated TypePrompt code.
+description: Author, format, compile, test, and integrate TypePrompt (.tp) prompt templates, schemas, tools, playground files (.play.tp), and typeprompt.yaml configuration across TypeScript, Python, Kotlin, Rust, C++, Swift, Dart, and C#. Use whenever working with .tp files, typeprompt.yaml, npx @typeprompt/cli, or generated TypePrompt code.
 ---
 
 # TypePrompt
@@ -115,11 +115,11 @@ API keys live in `.typeprompt.secrets.yaml` (gitignored).
 Always run `gen` (and `format`) after editing `.tp` files to validate schemas, examples, and regenerate code:
 
 ```bash
-npx typeprompt init                     # Scaffold typeprompt.yaml + prompts/
-npx typeprompt gen                      # Compile & generate code (--watch / -w)
-npx typeprompt format                   # Format .tp files (--ci to check only)
-npx typeprompt run prompts/Foo.play.tp  # Run playground samples (-o out.json)
-npx typeprompt patch -b <base> -o <dir> # Create a template-override patch project
+npx @typeprompt/cli init                     # Scaffold typeprompt.yaml + prompts/
+npx @typeprompt/cli gen                      # Compile & generate code (--watch / -w)
+npx @typeprompt/cli format                   # Format .tp files (--ci to check only)
+npx @typeprompt/cli run prompts/Foo.play.tp  # Run playground samples (-o out.json)
+npx @typeprompt/cli patch -b <base> -o <dir> # Create a template-override patch project
 ```
 
 Pass `-p <dir>` to target a project directory other than cwd.

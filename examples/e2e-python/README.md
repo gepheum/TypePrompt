@@ -7,7 +7,7 @@ An engaging day-planner and local activity advisor built with Python, TypePrompt
 ## Prerequisites
 
 - Python 3.12 or higher
-- Node.js 18 or higher (for `npx typeprompt`)
+- Node.js 18 or higher (for `npx @typeprompt/cli`)
 - An Anthropic API key (`ANTHROPIC_API_KEY`)
 
 ---
@@ -47,7 +47,7 @@ pip install -r requirements.txt
 To generate the typed prompt and tool code from your XML templates:
 
 ```bash
-npx typeprompt gen
+npx @typeprompt/cli gen
 ```
 
 This generates `src/gen/prompts.py` containing:

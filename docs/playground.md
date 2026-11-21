@@ -80,13 +80,13 @@ Click **Save to disk** to export the full run (rendered requests, model response
 ## Running from the command line
 
 ```bash
-npx typeprompt run prompts/Translate.play.tp
+npx @typeprompt/cli run prompts/Translate.play.tp
 ```
 
 The command locates the project by searching for `typeprompt.yaml` in the file's directory and its parents, runs every sample, and prints the inference run as JSON. Use `-o` to write it to a file instead:
 
 ```bash
-npx typeprompt run prompts/Translate.play.tp -o runs/translate.json
+npx @typeprompt/cli run prompts/Translate.play.tp -o runs/translate.json
 ```
 
 The output has the same structure as runs saved from VS Code. Each entry in `samples` contains the sample, the rendered `request` (system message, messages, tools, output schema), and a `result` whose `kind` is one of:
@@ -105,7 +105,7 @@ Because it runs without an editor and produces structured output, `typeprompt ru
 
 ```markdown
 After changing a prompt template in `prompts/`, run its playground with
-`npx typeprompt run prompts/<TemplateName>.play.tp` and check each sample's
+`npx @typeprompt/cli run prompts/<TemplateName>.play.tp` and check each sample's
 `result`. Add samples to the playground file to cover new cases.
 ```
 

@@ -30,8 +30,8 @@ With template overrides:
 ## How template overrides work
 
 1. **Base templates**: Your compiled application packages a snapshot of its prompt templates and tools.
-2. **Safe patching**: A *patch project* is initialized using `npx typeprompt patch`. The compiler enforces that template names, namespaces, and schemas remain strictly identical to the base project, ensuring runtime type safety and contract compatibility.
-3. **Sparse delta**: Running `npx typeprompt gen` in the patch project generates `overrides.json`, a minimal JSON payload containing only the templates and tools that were modified.
+2. **Safe patching**: A *patch project* is initialized using `npx @typeprompt/cli patch`. The compiler enforces that template names, namespaces, and schemas remain strictly identical to the base project, ensuring runtime type safety and contract compatibility.
+3. **Sparse delta**: Running `npx @typeprompt/cli gen` in the patch project generates `overrides.json`, a minimal JSON payload containing only the templates and tools that were modified.
 4. **Dynamic injection**: Your application's API endpoint passes this JSON object to `template_overrider.apply_overrides(...)` to obtain a scoped `Prompts` instance used solely for that request.
 
 ---
@@ -103,7 +103,7 @@ TypePrompt CLI provides the `patch` command to initialize an isolated workspace 
 ### Creating a patch project
 
 ```bash
-npx typeprompt patch -b <base> -o <output-dir>
+npx @typeprompt/cli patch -b <base> -o <output-dir>
 ```
 
 #### Options
@@ -132,13 +132,13 @@ To ensure your application code never breaks at runtime, the compiler strictly e
 After modifying prompt files in the patch project, generate the override payload:
 
 ```bash
-npx typeprompt gen
+npx @typeprompt/cli gen
 ```
 
 Or from outside the directory:
 
 ```bash
-npx typeprompt gen -p /path/to/patch-dir
+npx @typeprompt/cli gen -p /path/to/patch-dir
 ```
 
 This compiles your changes against `patch-base.json` and writes `overrides.json`. The resulting file contains only the templates and tools that were modified.
@@ -157,7 +157,7 @@ Template overrides enable an autonomous feedback loop where an AI coding agent r
                                │
                                ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│ 2. npx typeprompt patch -b <url> -o /tmp/patch                  │
+│ 2. npx @typeprompt/cli patch -b <url> -o /tmp/patch             │
 │    Clone templates into an isolated scratch workspace           │
 └──────────────────────────────┬──────────────────────────────────┘
                                │
@@ -169,7 +169,7 @@ Template overrides enable an autonomous feedback loop where an AI coding agent r
                                │
                                ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│ 4. npx typeprompt gen -p /tmp/patch                             │
+│ 4. npx @typeprompt/cli gen -p /tmp/patch                        │
 │    Validate edits and compile overrides.json                    │
 └──────────────────────────────┬──────────────────────────────────┘
                                │
@@ -310,13 +310,13 @@ Once your service is running:
 
 ```bash
 # 1. Fetch current templates and create a patch project
-npx typeprompt patch -b http://localhost:8000/api/prompts/templates -o /tmp/triage-patch
+npx @typeprompt/cli patch -b http://localhost:8000/api/prompts/templates -o /tmp/triage-patch
 
 # 2. Modify prompt instructions or examples in /tmp/triage-patch/prompts/TriageTicket.tp
 # ... make edits ...
 
 # 3. Compile the patch to produce overrides.json
-npx typeprompt gen -p /tmp/triage-patch
+npx @typeprompt/cli gen -p /tmp/triage-patch
 
 # 4. Invoke the API, embedding overrides.json as the template_overrides JSON object:
 jq -n \

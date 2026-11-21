@@ -7,7 +7,7 @@ An SRE Incident Commander and automated triage assistant built with Rust, TypePr
 ## Prerequisites
 
 - Rust 1.75 or higher (with Cargo)
-- Node.js 18 or higher (for `npx typeprompt`)
+- Node.js 18 or higher (for `npx @typeprompt/cli`)
 - A Google Gemini API key (`GEMINI_API_KEY`) from [Google AI Studio](https://aistudio.google.com/)
 
 ---
@@ -35,7 +35,7 @@ An SRE Incident Commander and automated triage assistant built with Rust, TypePr
 To generate the typed prompt and tool code from your XML templates:
 
 ```bash
-npx typeprompt gen
+npx @typeprompt/cli gen
 ```
 
 This generates `src/gen/prompts.rs` containing:

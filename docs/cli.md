@@ -20,7 +20,7 @@ Commands that operate on a project use the current directory by default. Pass `-
 ### `init`
 
 ```bash
-npx typeprompt init [-p <path>]
+npx @typeprompt/cli init [-p <path>]
 ```
 
 Creates `typeprompt.yaml` and a `prompts/` directory with a starter template. The target directory is created if it doesn't exist. An existing `typeprompt.yaml` is left untouched.
@@ -28,7 +28,7 @@ Creates `typeprompt.yaml` and a `prompts/` directory with a starter template. Th
 ### `gen`
 
 ```bash
-npx typeprompt gen [-p <path>] [--watch]
+npx @typeprompt/cli gen [-p <path>] [--watch]
 ```
 
 Compiles the project and writes generated code for each language configured under [`gen`](#gen-1). With `--watch` (`-w`), regenerates whenever a template file changes. In a [patch project](/template-overrides), also writes `overrides.json`.
@@ -36,7 +36,7 @@ Compiles the project and writes generated code for each language configured unde
 ### `format`
 
 ```bash
-npx typeprompt format [-p <path>] [--ci]
+npx @typeprompt/cli format [-p <path>] [--ci]
 ```
 
 Formats all template files in place. With `--ci`, checks formatting without modifying files and fails if any file is not properly formatted.
@@ -44,7 +44,7 @@ Formats all template files in place. With `--ci`, checks formatting without modi
 ### `run`
 
 ```bash
-npx typeprompt run <file> [-o <path>]
+npx @typeprompt/cli run <file> [-o <path>]
 ```
 
 Runs inference on every sample in a playground file and prints the results as JSON, or writes them to the file given by `-o`. The project is located by searching for `typeprompt.yaml` in the file's directory and its parents. See [playground inference](/playground#running-from-the-command-line).
@@ -52,7 +52,7 @@ Runs inference on every sample in a playground file and prints the results as JS
 ### `patch`
 
 ```bash
-npx typeprompt patch -b <base> -o <output-dir>
+npx @typeprompt/cli patch -b <base> -o <output-dir>
 ```
 
 Creates a patch project for editing prompts against a base project. See [template overrides](/template-overrides#the-cli-patch-command).
@@ -96,7 +96,7 @@ One entry per target language. Each entry requires a `file` path for the generat
 
 ### `patch`
 
-Set by `npx typeprompt patch` in patch projects; you don't need to edit it. See [template overrides](/template-overrides#what-the-patch-project-contains).
+Set by `npx @typeprompt/cli patch` in patch projects; you don't need to edit it. See [template overrides](/template-overrides#what-the-patch-project-contains).
 
 ### API keys
 

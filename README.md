@@ -63,7 +63,7 @@ Prompt templates are plain XML files that bring together prompt instructions, ty
 </template>
 ```
 
-`npx typeprompt gen` compiles your templates into a type-safe API in your target language. Here's how you use it in TypeScript:
+`npx @typeprompt/cli gen` compiles your templates into a type-safe API in your target language. Here's how you use it in TypeScript:
 
 ```typescript
 // MyApp.ts
@@ -118,9 +118,9 @@ If your application code and your templates drift apart, your compiler or type c
 
 ## Getting started
 
-1. **Initialize your project**: Run `npx typeprompt init` in your project root.
+1. **Initialize your project**: Run `npx @typeprompt/cli init` in your project root.
 2. **Configure target languages**: Edit `typeprompt.yaml` to specify your target language.
-3. **Generate code**: Run `npx typeprompt gen`, or pass `--watch` for automatic regeneration on file changes.
+3. **Generate code**: Run `npx @typeprompt/cli gen`, or pass `--watch` for automatic regeneration on file changes.
 
 See the [Quick start guide](https://typeprompt.dev/quick-start) for a full walkthrough.
 
