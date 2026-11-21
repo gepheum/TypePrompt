@@ -24,8 +24,8 @@ TypeScript, Python, Kotlin, Rust, C++, Swift, Dart, C# (*more languages to come*
 
 - **[TypeScript-based schemas](/schema)**: Define types with familiar TypeScript syntax. TypePrompt generates native types and standard JSON Schemas for all major LLM providers.
 - **[Few-shot examples](/reference#examples)**: Write examples in YAML, checked against your schemas at build time and automatically formatted using your user instructions.
-- **[Typed tools](/reference#the-tool-element)**: Declare tools with typed inputs and outputs, and parse the model's tool calls into native types.
 - **[Flexible input formatting](/reference#insert)**: Render complex inputs as JSON, YAML, CSV, or [TOON](https://toonformat.dev) without changing application code.
+- **[Checked inline references (`<c>`)](/reference#c)**: Wrap field names, tool names, or inline JSON examples in `<c>` to verify them against your schemas at compile time so your instructions stay in sync with your types.
 - **[Snippets and conditional logic](/reference#snippet)**: Compose prompts from modular text fragments, and branch content on input values with `if` and `switch` snippets.
 - **[Custom metadata](/reference#the-meta-element-top-level)**: Define your own `Meta` type to attach typed configuration (model, temperature, routing tags, or anything else your application needs) to each template.
 
@@ -33,7 +33,7 @@ TypeScript, Python, Kotlin, Rust, C++, Swift, Dart, C# (*more languages to come*
 
 - **[Variants](/reference#variant)**: Author prompt versions that share the same schemas, and pick one at runtime for A/B testing.
 - **[Template overrides](/template-overrides)**: Inject modified templates at runtime, without rebuilding or redeploying, for fast iteration and evaluations.
-- **[Playground](/playground)**: Run templates against any LLM from VS Code or the command line.
+- **[Playground](/playground)**: Save sample inputs in files alongside your templates, and run them against any LLM from your IDE or the CLI.
 
 **Tooling**
 
