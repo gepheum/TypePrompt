@@ -1,8 +1,19 @@
 {
   "name": "typeprompt",
   "version": "0.1.0",
+  "description": "End-to-end type safety for LLM prompts across 8 programming languages",
+  "homepage": "https://typeprompt.dev",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gepheum/typeprompt.git",
+    "directory": "packages/cli"
+  },
   "license": "MIT",
   "private": false,
+  "files": [
+    "dist/",
+    "!dist/**/*.test.*"
+  ],
   "type": "module",
   "bin": {
     "typeprompt": "dist/main.js"
@@ -24,9 +35,9 @@
   },
   "dependencies": {
     "@toon-format/toon": "^4.1.0",
-    "@typeprompt/core": "*",
-    "@typeprompt/formatter": "*",
-    "@typeprompt/inference-runner": "*",
+    "@typeprompt/core": "0.1.0",
+    "@typeprompt/formatter": "0.1.0",
+    "@typeprompt/inference-runner": "0.1.0",
     "@types/glob-parent": "^5.1.3",
     "glob": "^13.0.6",
     "glob-parent": "^6.0.2",

@@ -1,7 +1,21 @@
 {
   "name": "@typeprompt/formatter",
   "version": "0.1.0",
+  "description": "Formatter for TypePrompt (.tp) template files",
+  "homepage": "https://typeprompt.dev",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gepheum/typeprompt.git",
+    "directory": "packages/formatter"
+  },
   "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist/",
+    "!dist/**/*.test.*"
+  ],
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -25,7 +39,7 @@
   },
   "dependencies": {
     "@prettier/plugin-xml": "^3.4.2",
-    "@typeprompt/core": "*",
+    "@typeprompt/core": "0.1.0",
     "prettier": "^3.9.6"
   }
 }

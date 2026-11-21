@@ -1,7 +1,21 @@
 {
   "name": "@typeprompt/inference-runner",
   "version": "0.1.0",
+  "description": "Playground inference runner for TypePrompt templates",
+  "homepage": "https://typeprompt.dev",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gepheum/typeprompt.git",
+    "directory": "packages/inference-runner"
+  },
   "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist/",
+    "!dist/**/*.test.*"
+  ],
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -29,7 +43,7 @@
     "@ai-sdk/mistral": "^4.0.77",
     "@ai-sdk/openai": "^4.0.103",
     "@ai-sdk/xai": "^5.0.35",
-    "@typeprompt/core": "*",
+    "@typeprompt/core": "0.1.0",
     "ai": "^7.0.154"
   }
 }

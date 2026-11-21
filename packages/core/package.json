@@ -1,7 +1,21 @@
 {
   "name": "@typeprompt/core",
   "version": "0.1.0",
+  "description": "Core compiler, schema validator, and LSP engine for TypePrompt",
+  "homepage": "https://typeprompt.dev",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gepheum/typeprompt.git",
+    "directory": "packages/core"
+  },
   "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist/",
+    "!dist/**/*.test.*"
+  ],
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

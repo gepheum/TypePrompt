@@ -1,8 +1,22 @@
 {
   "name": "@typeprompt/language-server",
   "version": "0.1.0",
+  "description": "Language Server Protocol (LSP) implementation for TypePrompt",
+  "homepage": "https://typeprompt.dev",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gepheum/typeprompt.git",
+    "directory": "packages/language-server"
+  },
   "license": "MIT",
   "private": false,
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist/",
+    "!dist/**/*.test.*"
+  ],
   "type": "module",
   "bin": {
     "typeprompt-language-server": "dist/main.js"
@@ -14,8 +28,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@typeprompt/core": "*",
-    "@typeprompt/formatter": "*",
+    "@typeprompt/core": "0.1.0",
+    "@typeprompt/formatter": "0.1.0",
     "fast-diff": "^1.3.0",
     "glob": "^13.0.6",
     "minimatch": "^10.2.6",

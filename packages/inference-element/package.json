@@ -1,7 +1,22 @@
 {
   "name": "@typeprompt/inference-element",
   "version": "0.1.0",
+  "description": "Web components for rendering TypePrompt playground inference results",
+  "homepage": "https://typeprompt.dev",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gepheum/typeprompt.git",
+    "directory": "packages/inference-element"
+  },
   "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist/",
+    "!dist/**/*.test.*",
+    "README.md"
+  ],
   "type": "module",
   "main": "dist/index.js",
   "module": "dist/index.js",
@@ -38,7 +53,7 @@
     "test": "node --import tsx ../../node_modules/mocha/bin/mocha.js \"src/**/*.test.ts\""
   },
   "dependencies": {
-    "@typeprompt/core": "*",
+    "@typeprompt/core": "0.1.0",
     "lit": "^3.2.0",
     "nanoevents": "^10.0.0",
     "yaml": "^2.9.0"
