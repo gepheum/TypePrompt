@@ -47,3 +47,11 @@ npx typeprompt gen --watch
 ```
 
 The generated code exposes a `prompts` object with one typed `render` method per template. Render it with typed input, send the result to your LLM, then parse the response back into a typed object — see the guide for your language for the exact API.
+
+## Using with AI coding agents
+
+If you use an AI coding agent (Claude Code, Cursor, Codex, etc.), install the TypePrompt agent skill so it knows the `.tp` template syntax, schema rules, and CLI:
+
+```bash
+npx skills add gepheum/typeprompt
+```

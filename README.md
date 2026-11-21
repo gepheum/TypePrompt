@@ -124,6 +124,12 @@ If your application code and your templates drift apart, your compiler or type c
 
 See the [Quick start guide](https://typeprompt.dev/quick-start) for a full walkthrough.
 
+**Using an AI coding agent?** Install the TypePrompt skill so your agent (Claude Code, Cursor, Codex, etc.) knows the `.tp` syntax and CLI:
+
+```bash
+npx skills add gepheum/typeprompt
+```
+
 ---
 
 ## Comparison with other tools
