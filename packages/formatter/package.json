@@ -1,6 +1,6 @@
 {
   "name": "@typeprompt/formatter",
-  "version": "0.1.0",
+  "version": "0.9.0",
   "description": "Formatter for TypePrompt (.tp) template files",
   "homepage": "https://typeprompt.dev",
   "repository": {
@@ -39,7 +39,7 @@
   },
   "dependencies": {
     "@prettier/plugin-xml": "^3.4.2",
-    "@typeprompt/core": "0.1.0",
+    "@typeprompt/core": "0.9.0",
     "prettier": "^3.9.6"
   }
 }
