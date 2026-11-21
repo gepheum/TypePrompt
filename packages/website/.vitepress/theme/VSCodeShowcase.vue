@@ -11,8 +11,8 @@
         playsinline
         preload="auto"
         class="vscode-video"
-        width="2662"
-        height="1498"
+        width="2432"
+        height="1368"
       >
         <source src="/vscode-demo.webm" type="video/webm" />
         <source src="/vscode-demo.mp4" type="video/mp4" />
@@ -64,6 +64,7 @@
   max-width: 100%;
   height: auto;
   border-radius: 10px;
+  clip-path: inset(0.25% 0.25% round 10px);
 }
 
 /* Footer / Marketplace Button */
