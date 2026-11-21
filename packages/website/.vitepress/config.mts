@@ -207,6 +207,18 @@ export default defineConfig({
   sitemap: {
     hostname: SITE_URL,
   },
+  transformPageData(pageData) {
+    if (pageData.relativePath.startsWith("blog/")) {
+      pageData.frontmatter.sidebar = false;
+      pageData.frontmatter.prev = false;
+      pageData.frontmatter.next = false;
+      if (pageData.relativePath === "blog/index.md") {
+        pageData.frontmatter.aside = false;
+        pageData.frontmatter.editLink = false;
+        pageData.frontmatter.lastUpdated = false;
+      }
+    }
+  },
   buildEnd: generateLlmsFiles,
   vite: {
     publicDir: fileURLToPath(new URL("../public", import.meta.url)),
@@ -238,6 +250,7 @@ export default defineConfig({
       },
       { text: "Languages", items: languageItems, activeMatch: "^/languages/" },
       { text: "Examples", link: "/examples", activeMatch: "^/examples" },
+      { text: "Blog", link: "/blog/", activeMatch: "^/blog/" },
     ],
 
     // A single sidebar for all docs pages (the home page layout has none).
