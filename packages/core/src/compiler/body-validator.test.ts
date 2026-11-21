@@ -182,6 +182,59 @@ describe("validateTemplateBody - plain text and snippet references", () => {
       definitionLinks: [],
     });
   });
+
+  it('reports an error for <insert schema="Output"> when Output is string primitive', () => {
+    const args = {
+      bodyXml: '<system><insert schema="Output" format="typescript"/></system>',
+      schemaSource: "type Input = string; type Output = string;",
+    };
+    expect(testValidateBody(args)).toMatch({
+      errors: [
+        {
+          message: "Cannot insert schema when Output is string",
+        },
+      ],
+      definitionLinks: [{ definition: { text: "Output" } }],
+    });
+  });
+
+  it('reports an error for <insert schema="Output"> when Output is aliased string primitive', () => {
+    const args = {
+      bodyXml: '<system><insert schema="Output" format="typescript"/></system>',
+      schemaSource:
+        "type Input = string; type Text = string; type Output = Text;",
+    };
+    expect(testValidateBody(args)).toMatch({
+      errors: [
+        {
+          message: "Cannot insert schema when Output is string",
+        },
+      ],
+      definitionLinks: [{ definition: { text: "Output" } }],
+    });
+  });
+
+  it('allows <insert schema="Output"> when Output is an interface', () => {
+    const args = {
+      bodyXml: '<system><insert schema="Output" format="typescript"/></system>',
+      schemaSource: "type Input = string; interface Output { result: string; }",
+    };
+    expect(testValidateBody(args)).toMatch({
+      errors: [],
+      definitionLinks: [{ definition: { text: "Output" } }],
+    });
+  });
+
+  it('allows <insert schema="Output"> when Output is an object type alias', () => {
+    const args = {
+      bodyXml: '<system><insert schema="Output" format="typescript"/></system>',
+      schemaSource: "type Input = string; type Output = { result: string; };",
+    };
+    expect(testValidateBody(args)).toMatch({
+      errors: [],
+      definitionLinks: [{ definition: { text: "Output" } }],
+    });
+  });
 });
 
 // ---------------------------------------------------------------------------

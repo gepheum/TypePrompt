@@ -514,22 +514,6 @@ describe("parseBody - <insert schema='...' format='...' />", () => {
     });
   });
 
-  it("rejects camelCase schema names", () => {
-    expect(
-      testParseBody(
-        '<system><insert schema="output" format="typescript"/></system>',
-      ),
-    ).toMatch({
-      body: [{ kind: "insert-schema" }],
-      errors: [
-        {
-          message:
-            "Invalid value for attribute 'schema': expected a PascalCase identifier",
-        },
-      ],
-    });
-  });
-
   it("reports unexpected attributes on insert schema", () => {
     expect(
       testParseBody(

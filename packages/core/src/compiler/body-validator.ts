@@ -6,7 +6,10 @@ import type {
   Schema,
   SyntheticType,
 } from "../schema/schema-types.js";
-import { resolveType } from "../schema/type-resolver.js";
+import {
+  resolveMaybeInvalidType,
+  resolveType,
+} from "../schema/type-resolver.js";
 import type { Span, ValidationResult } from "../util/shared-types.js";
 import { ValidationResultBuilder } from "../util/validation-result-builder.js";
 import type {
@@ -69,6 +72,34 @@ function validateBodyImpl<HasValContext extends boolean>(
       validationResult.push(
         validateCTag(piece.cTag, schemasForBodyValidation, toolNames),
       );
+      continue;
+    } else if (
+      piece.kind === "insert-schema" &&
+      piece.schema.text === "Output"
+    ) {
+      const typeDecl = templateSchema.typeDeclarations[piece.schema.text];
+      if (typeDecl) {
+        definitionLinks.push({
+          reference: piece.schema,
+          definition: typeDecl.name,
+        });
+      }
+      const outputDecl = templateSchema.typeDeclarations["Output"];
+      if (outputDecl) {
+        const resolvedOutput = resolveMaybeInvalidType(
+          outputDecl.valueType,
+          templateSchema,
+        );
+        if (
+          resolvedOutput?.kind === "primitive" &&
+          resolvedOutput.primitive.text === "string"
+        ) {
+          errors.push({
+            span: piece.schema,
+            message: "Cannot insert schema when Output is string",
+          });
+        }
+      }
       continue;
     } else if (piece.kind !== "insert-val") {
       continue;

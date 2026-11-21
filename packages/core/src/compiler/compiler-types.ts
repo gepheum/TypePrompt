@@ -162,7 +162,7 @@ export type BodyPiece<HasValContext extends boolean = false> =
     }
   | {
       readonly kind: "insert-schema";
-      readonly schema: TextSpan;
+      readonly schema: TextSpan<"Output">;
       /** Only contains whitespace characters. */
       readonly indent: string;
       /** The insert tag. */

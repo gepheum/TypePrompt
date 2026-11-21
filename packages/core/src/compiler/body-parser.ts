@@ -62,7 +62,10 @@ function parseBodyImpl<HasValContext extends boolean>(
 
   const visitInsertSchema = (insertNode: ElementNode): void => {
     const attrs = checkKnownXmlAttributes(insertNode, {
-      schema: expectIdentifier({ format: "PascalCase", optional: false }),
+      schema: expectOneOf({
+        values: ["Output"],
+        optional: false,
+      }),
       format: expectOneOf({
         values: ["typescript"],
         optional: false,
@@ -222,7 +225,7 @@ type RawBodyPiece<HasValContext extends boolean, Text = MappedText> =
     }
   | {
       readonly kind: "insert-schema";
-      readonly schema: TextSpan;
+      readonly schema: TextSpan<"Output">;
       readonly tag: Span;
     };
 
