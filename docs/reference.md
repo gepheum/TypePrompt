@@ -607,14 +607,14 @@ The `<model>` element contains YAML configuration representing model options:
 | Field | Requirement | Type | Description |
 |---|---|---|---|
 | `model` | Required | `string` | Model identifier (e.g. `openai/gpt-4o`, `anthropic/claude-sonnet-4.5`) |
-| `temperature` | Optional | `number` | Sampling temperature |
-| `maxTokens` / `maxOutputTokens` | Optional | `number` | Maximum tokens to generate |
-| `topP` | Optional | `number` | Nucleus sampling probability threshold |
-| `topK` | Optional | `number` | Top-k sampling threshold |
-| `presencePenalty` | Optional | `number` | Presence penalty |
-| `frequencyPenalty` | Optional | `number` | Frequency penalty |
-| `stopSequences` | Optional | `string[]` | Stop sequences |
-| `seed` | Optional | `number` | Random seed |
+| `temperature` | Optional | `number` | Between 0 and 2; higher values produce more varied output |
+| `maxTokens` / `maxOutputTokens` | Optional | `integer` | Maximum number of tokens to generate; at least 1 |
+| `topP` | Optional | `number` | Nucleus sampling: only consider tokens within this cumulative probability (0 to 1) |
+| `topK` | Optional | `integer` | Only sample from the K most likely tokens |
+| `presencePenalty` | Optional | `number` | Between -2 and 2; positive values discourage reusing tokens that already appeared |
+| `frequencyPenalty` | Optional | `number` | Between -2 and 2; positive values discourage tokens in proportion to how often they appeared |
+| `stopSequences` | Optional | `string[]` | Generation stops when the model outputs any of these strings |
+| `seed` | Optional | `integer` | For best-effort deterministic sampling, on providers that support it |
 | `reasoning` | Optional | `string` | Reasoning effort (`provider-default`, `none`, `minimal`, `low`, `medium`, `high`, `xhigh`) |
 | `providerOptions` | Optional | `object` | Provider-specific options for `openai`, `anthropic`, `google`, `xai`, `mistral` |
 
@@ -624,8 +624,8 @@ Each sample in the `<samples>` YAML array has the following structure:
 
 | Field | Requirement | Type | Description |
 |---|---|---|---|
-| `name` | Optional | `string` | Optional label or description for the sample |
-| `note` | Optional | `string` | Optional note or commentary about the sample |
+| `name` | Optional | `string` | Label or description for the sample |
+| `note` | Optional | `string` | Note or commentary about the sample |
 | `history` | Optional | `HistoryEntry[]` | Previous completed turns in multi-turn conversations |
 | `input` | Required | `Input` | Current turn inputs matching the target template's `Input` schema |
 | `steps` | Optional | `Step[]` | Tool calls made during the current turn |
