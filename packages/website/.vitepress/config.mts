@@ -237,6 +237,15 @@ export default defineConfig({
     ],
     ["meta", { property: "og:url", content: "https://typeprompt.dev/" }],
     ["meta", { name: "twitter:card", content: "summary" }],
+    [
+      "script",
+      {
+        defer: "",
+        src: "https://cloud.umami.is/script.js",
+        "data-website-id": "1419b7d6-4be5-48b1-91ec-54b36f347508",
+        "data-domains": "typeprompt.dev",
+      },
+    ],
   ],
 
   themeConfig: {
