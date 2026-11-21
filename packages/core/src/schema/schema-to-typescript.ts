@@ -25,15 +25,11 @@ class Generator {
   private readonly declarations: string[] = [];
   /** Types referenced by the declaration being rendered, in order. */
   private references: NamedTypeRef[] = [];
-  private usesInteger = false;
 
   constructor(private readonly schema: SchemaView) {}
 
   generate(rootName: string): string {
     this.emit({ name: rootName, shared: false });
-    if (this.usesInteger) {
-      this.declarations.push("/** A 32-bit integer. */\ntype integer = number");
-    }
     return this.declarations.join("\n");
   }
 
@@ -104,10 +100,7 @@ class Generator {
       }
       case "primitive": {
         const primitive = type.primitive.text;
-        if (primitive === "integer") {
-          this.usesInteger = true;
-        }
-        return primitive;
+        return primitive === "integer" ? "number" : primitive;
       }
       case "record": {
         const value = this.typeToTypeScript(type.valueType, indent);

@@ -1,0 +1,10 @@
+<playground for="InsertOutputSchema">
+  <model>
+    model: openai/gpt-4o
+  </model>
+
+  <samples>
+    - input:
+        topic: ""
+  </samples>
+</playground>

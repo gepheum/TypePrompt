@@ -4,9 +4,19 @@
       topic: string;
     }
 
+    /**
+     * Foo
+     */
+    interface Foo {
+      /** foo */
+      foo: integer;
+    }
     interface Output {
       title: string;
-      score: number;
+      score?: number;
+      foos: {
+        foo: Foo;
+      }[];
     }
   </schema>
 

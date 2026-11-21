@@ -384,14 +384,8 @@ describe("schemaToTypeScript", () => {
   });
 
   it("appends an integer type alias when integer is used", () => {
-    expect(gen("interface Output { count: integer; }")).toBe(
-      lines(
-        "interface Output {",
-        "  count: integer",
-        "}",
-        "/** A 32-bit integer. */",
-        "type integer = number",
-      ),
+    expect(gen("interface Output { count: number; }")).toBe(
+      lines("interface Output {", "  count: number", "}"),
     );
   });
 
@@ -550,7 +544,7 @@ describe("schemaToTypeScript", () => {
       gen(
         [
           "interface Output { item: Item; }",
-          "interface Item { count: integer; }",
+          "interface Item { count: number; }",
         ].join("\n"),
       ),
     ).toBe(
@@ -559,10 +553,8 @@ describe("schemaToTypeScript", () => {
         "  item: Item",
         "}",
         "interface Item {",
-        "  count: integer",
+        "  count: number",
         "}",
-        "/** A 32-bit integer. */",
-        "type integer = number",
       ),
     );
   });
@@ -942,7 +934,7 @@ describe("schemaToTypeScript", () => {
       gen(
         [
           "interface Output { item: Item; }",
-          "interface Item { count: integer; }",
+          "interface Item { count: number; }",
         ].join("\n"),
       ),
     ).toBe(
@@ -951,10 +943,8 @@ describe("schemaToTypeScript", () => {
         "  item: Item",
         "}",
         "interface Item {",
-        "  count: integer",
+        "  count: number",
         "}",
-        "/** A 32-bit integer. */",
-        "type integer = number",
       ),
     );
   });

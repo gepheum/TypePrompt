@@ -171,7 +171,7 @@ Answer the user's question clearly and concisely.
 
 #### `<insert>`
 
-Inserts a formatted value or a snippet into the message at this position.
+Inserts a formatted value, a snippet, or a schema into the message at this position.
 
 **To insert a value**, set the `val` attribute to an expression rooted at `input`:
 
@@ -197,7 +197,20 @@ The `format` attribute controls serialization:
 <insert snippet="systemContext" />
 ```
 
-**Indentation propagation:** if the `<insert>` tag appears on an indented line, that indentation is prepended to every line of the resolved value or snippet. This lets you embed multi-line content inside a block element cleanly:
+**To insert a schema**, use the `schema` attribute with `format="typescript"`:
+
+```xml
+<system>
+  ...
+
+  Your response must be a valid JSON object that satisfies this schema:
+  <insert schema="Output" format="typescript" />
+</system>
+```
+
+This injects the TypeScript type definition for `Output` (including any dependent types and documentation comments) directly into the prompt. This is mainly useful when targeting models that do not support strict JSON schemas via API parameters.
+
+**Indentation propagation:** if the `<insert>` tag appears on an indented line, that indentation is prepended to every line of the resolved value, snippet, or schema. This lets you embed multi-line content inside a block element cleanly:
 
 ```xml
 <user>
