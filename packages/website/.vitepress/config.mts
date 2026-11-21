@@ -1,4 +1,6 @@
-import { defineConfig } from "vitepress";
+import { defineConfig, type SiteConfig } from "vitepress";
+import fs from "node:fs";
+import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Lsp } from "@typeprompt/core";
 
@@ -123,6 +125,78 @@ const docsSidebar = [
   },
 ];
 
+const SITE_URL = "https://typeprompt.dev";
+
+function parseFrontmatter(raw: string): {
+  description?: string;
+  body: string;
+} {
+  const match = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n*/);
+  if (!match) {
+    return { body: raw.trim() };
+  }
+  const frontmatter = match[1];
+  const descMatch = frontmatter.match(/^description:\s*(.+)$/m);
+  const description = descMatch?.[1]
+    .trim()
+    .replace(/^["']|["']$/g, "");
+  return {
+    description,
+    body: raw.slice(match[0].length).trim(),
+  };
+}
+
+function generateLlmsFiles(siteConfig: SiteConfig): void {
+  const indexLines: string[] = [
+    "# TypePrompt",
+    "",
+    "> End-to-end type safety for LLM prompts. Write prompt templates with schemas, tools, and few-shot examples in dedicated `.tp` files and compile them into a type-safe API for TypeScript, Python, Kotlin, Rust, C++, Swift, Dart, and C#.",
+    "",
+    `Full documentation in a single file: ${SITE_URL}/llms-full.txt`,
+  ];
+
+  const fullSections: string[] = [
+    "# TypePrompt Documentation",
+    "",
+    `Source: ${SITE_URL}`,
+  ];
+
+  for (const section of docsSidebar) {
+    indexLines.push("", `## ${section.text}`, "");
+    for (const item of section.items) {
+      const relPath = `${item.link.replace(/^\//, "")}.md`;
+      const srcPath = path.join(siteConfig.srcDir, relPath);
+      const raw = fs.readFileSync(srcPath, "utf8");
+      const { description, body } = parseFrontmatter(raw);
+
+      // Emit clean markdown copy for each page so agents can fetch individual docs
+      const outMdPath = path.join(siteConfig.outDir, relPath);
+      fs.mkdirSync(path.dirname(outMdPath), { recursive: true });
+      fs.writeFileSync(outMdPath, `${body}\n`, "utf8");
+
+      const url = `${SITE_URL}/${relPath}`;
+      indexLines.push(
+        description
+          ? `- [${item.text}](${url}): ${description}`
+          : `- [${item.text}](${url})`,
+      );
+
+      fullSections.push("", "---", "", `<!-- Source: ${url} -->`, "", body);
+    }
+  }
+
+  fs.writeFileSync(
+    path.join(siteConfig.outDir, "llms.txt"),
+    `${indexLines.join("\n")}\n`,
+    "utf8",
+  );
+  fs.writeFileSync(
+    path.join(siteConfig.outDir, "llms-full.txt"),
+    `${fullSections.join("\n")}\n`,
+    "utf8",
+  );
+}
+
 export default defineConfig({
   srcDir: "../../docs",
   title: "TypePrompt",
@@ -131,8 +205,9 @@ export default defineConfig({
   cleanUrls: true,
   lastUpdated: true,
   sitemap: {
-    hostname: "https://typeprompt.dev",
+    hostname: SITE_URL,
   },
+  buildEnd: generateLlmsFiles,
   vite: {
     publicDir: fileURLToPath(new URL("../public", import.meta.url)),
   },
