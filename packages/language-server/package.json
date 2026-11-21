@@ -1,6 +1,7 @@
 {
   "name": "@typeprompt/language-server",
   "version": "0.1.0",
+  "license": "MIT",
   "private": false,
   "type": "module",
   "bin": {

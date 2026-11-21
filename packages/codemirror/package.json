@@ -1,6 +1,7 @@
 {
   "name": "@typeprompt/codemirror",
   "version": "0.1.0",
+  "license": "MIT",
   "description": "CodeMirror 6 extension for TypePrompt",
   "files": [
     "dist/",
