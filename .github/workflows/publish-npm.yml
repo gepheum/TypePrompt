@@ -1,0 +1,54 @@
+name: Publish npm packages
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Run npm publish with --dry-run (no packages uploaded)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build publishable packages
+        run: |
+          npm run make-static-snippets
+          npm run build --workspace=@typeprompt/core
+          npm run build --workspace=@typeprompt/formatter
+          npm run build --workspace=@typeprompt/inference-runner
+          npm run build --workspace=@typeprompt/inference-element
+          npm run build --workspace=@typeprompt/codemirror
+          npm run build --workspace=@typeprompt/cli
+          npm run build --workspace=@typeprompt/language-server
+
+      - name: Run tests
+        run: npm test
+
+      - name: Publish workspaces to npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            npm publish --workspaces --dry-run
+          else
+            npm publish --workspaces --provenance
+          fi
