@@ -95,7 +95,7 @@ const docsSidebar = [
   {
     text: "Getting started",
     items: [
-      { text: "Introduction", link: "/guide/" },
+      { text: "Introduction", link: "/introduction" },
       { text: "Quick start", link: "/quick-start" },
       { text: "Project structure", link: "/project-structure" },
       { text: "Examples", link: "/examples" },
@@ -158,8 +158,8 @@ export default defineConfig({
     nav: [
       {
         text: "Docs",
-        link: "/guide/",
-        activeMatch: "^/(guide|quick-start|project-structure|playground|template-overrides|reference|schema|cli)",
+        link: "/introduction",
+        activeMatch: "^/(introduction|quick-start|project-structure|playground|template-overrides|reference|schema|cli)",
       },
       { text: "Languages", items: languageItems, activeMatch: "^/languages/" },
       { text: "Examples", link: "/examples", activeMatch: "^/examples" },
