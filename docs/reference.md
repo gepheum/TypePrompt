@@ -268,23 +268,27 @@ The `<description>` element inside `<tool>` may also contain `<enclosed>` and `<
 **Wrapping an identifier:**
 
 ```xml
-<schema>
-  interface Input {
-    documentText: string;
-    targetLanguage: string;
-  }
+<template>
+  <schema>
+    interface Input {
+      documentText: string;
+      targetLanguage: string;
+    }
 
-  interface Output {
-    translatedText: string;
-    detectedSourceLanguage: string;
-  }
-</schema>
+    interface Output {
+      translatedText: string;
+      detectedSourceLanguage: string;
+    }
+  </schema>
 
-<system>
-  Translate the <c>documentText</c> into the <c>targetLanguage</c>.
-  Return the result as <c>translatedText</c> and set <c>detectedSourceLanguage</c>
-  to the language you detected in the input.
-</system>
+  <system>
+    Translate the <c>documentText</c> into the <c>targetLanguage</c>.
+    Return the result as <c>translatedText</c> and set <c>detectedSourceLanguage</c>
+    to the language you detected in the input.
+  </system>
+
+  ...
+<template>
 ```
 
 The valid identifier names are: all field names and string literal values from the template's schema, the names of registered tools, and all field names and string literal values from each registered tool's schema.
