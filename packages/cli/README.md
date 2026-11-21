@@ -1,4 +1,4 @@
-# typeprompt
+# @typeprompt/cli
 
 CLI for [TypePrompt](https://typeprompt.dev) — end-to-end type safety for LLM prompts across TypeScript, Python, Kotlin, Rust, C++, Swift, Dart, and C#.
 
@@ -7,11 +7,11 @@ CLI for [TypePrompt](https://typeprompt.dev) — end-to-end type safety for LLM 
 ## Usage
 
 ```bash
-npx typeprompt init                     # Initialize typeprompt.yaml and prompts/
-npx typeprompt gen                      # Compile templates and generate native code (--watch)
-npx typeprompt format                   # Format .tp files (--ci to check only)
-npx typeprompt run prompts/Foo.play.tp  # Run playground inference samples
-npx typeprompt patch -b <base> -o <dir> # Create a template-override patch project
+npx @typeprompt/cli init                     # Initialize typeprompt.yaml and prompts/
+npx @typeprompt/cli gen                      # Compile templates and generate native code (--watch)
+npx @typeprompt/cli format                   # Format .tp files (--ci to check only)
+npx @typeprompt/cli run prompts/Foo.play.tp  # Run playground inference samples
+npx @typeprompt/cli patch -b <base> -o <dir> # Create a template-override patch project
 ```
 
 See the [Quick start guide](https://typeprompt.dev/quick-start) and [CLI documentation](https://typeprompt.dev/cli) for details.

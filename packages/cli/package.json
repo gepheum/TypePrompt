@@ -1,5 +1,5 @@
 {
-  "name": "typeprompt",
+  "name": "@typeprompt/cli",
   "version": "0.1.0",
   "description": "End-to-end type safety for LLM prompts across 8 programming languages",
   "homepage": "https://typeprompt.dev",
@@ -10,6 +10,9 @@
   },
   "license": "MIT",
   "private": false,
+  "publishConfig": {
+    "access": "public"
+  },
   "files": [
     "dist/",
     "!dist/**/*.test.*"
