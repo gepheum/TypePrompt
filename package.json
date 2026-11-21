@@ -36,11 +36,15 @@
     "@typescript-eslint/parser": "^8.56.0",
     "buckwheat": "^1.2.0",
     "eslint": "^10.0.1",
-    "mocha": "^12.0.0-rc.5",
+    "mocha": "^11.0.0",
     "prettier": "^3.9.6",
     "prettier-plugin-organize-imports": "^4.2.0",
     "tsx": "^4.21.0",
     "typescript": "^5.2.2",
     "typescript-eslint": "^8.56.0"
+  },
+  "dependencies": {
+    "glob": "14.0.6",
+    "minimatch": "11.0.9"
   }
 }
