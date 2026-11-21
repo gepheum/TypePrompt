@@ -58,7 +58,7 @@ Each `.tp` file holds everything about a single prompt in one place: its instruc
 </template>
 ```
 
-When you run `npx @typeprompt/cli gen`, the compiler validates the entire file against its `<schema>`. Every `<c>` reference in your instructions and every YAML entry in `<examples>` is checked against your schemas. If you rename `catAction` to `action`, the compiler immediately flags `<c>catAction</c>` and the `<examples>` block.
+When you run `bunx @typeprompt/cli gen`, the compiler validates the entire file against its `<schema>`. Every `<c>` reference in your instructions and every YAML entry in `<examples>` is checked against your schemas. If you rename `catAction` to `action`, the compiler immediately flags `<c>catAction</c>` and the `<examples>` block.
 
 It then generates native code for your target language. At the call site, `render(...)` enforces the exact `Input` type, so you can't forget a required placeholder, pass the wrong type, or use an invalid enum value like `"full"` instead of `"empty" | "half-empty"`:
 
@@ -87,15 +87,15 @@ TypePrompt currently compiles to 8 languages: TypeScript, Python, Kotlin, Rust, 
 
 A few other things we built because we kept wanting them ourselves:
 
-- **A Playground right in VS Code (and the CLI).** You can keep sample inputs in a `.play.tp` file next to your template and run them against real models from the [VS Code extension](https://marketplace.visualstudio.com/items?itemName=gepheum.typeprompt-vscode) or `npx @typeprompt/cli run`, without copy-pasting prompts into a web console.
-- **Formatting and editor support.** There's a standalone Language Server (`npx @typeprompt/language-server`) with diagnostics, go-to-definition, and rename, plus `npx @typeprompt/cli format` so `.tp` files stay tidy in CI.
+- **A Playground right in VS Code (and the CLI).** You can keep sample inputs in a `.play.tp` file next to your template and run them against real models from the [VS Code extension](https://marketplace.visualstudio.com/items?itemName=gepheum.typeprompt-vscode) or `bunx @typeprompt/cli run`, without copy-pasting prompts into a web console.
+- **Formatting and editor support.** There's a standalone Language Server (`bunx @typeprompt/language-server`) with diagnostics, go-to-definition, and rename, plus `bunx @typeprompt/cli format` so `.tp` files stay tidy in CI.
 - **Variants and runtime overrides.** You can keep A/B [variants](/reference#variant) under one schema, or load [template overrides](/template-overrides) at runtime when you want to iterate on wording without redeploying.
 - **An agent skill.** If you use Claude Code, Cursor, or another coding agent, `npx skills add gepheum/typeprompt` gives it the `.tp` syntax and CLI rules out of the box.
 
 ## Give it a try
 
 ```bash
-npx @typeprompt/cli init
+bunx @typeprompt/cli init
 ```
 
 The [Quick start guide](/quick-start) walks through setting up a project in a couple of minutes, and there are self-contained [examples](/examples) covering tools, complex types, variants, and namespaces. Everything is MIT-licensed on [GitHub](https://github.com/gepheum/typeprompt). If you try it and run into something rough, open an issue.

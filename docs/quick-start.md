@@ -10,7 +10,7 @@ description: Set up TypePrompt in your project and generate your first typed pro
 Run the init command in your project root:
 
 ```bash
-npx @typeprompt/cli init
+bunx @typeprompt/cli init
 ```
 
 This scaffolds a `typeprompt.yaml` configuration file and a `prompts/` directory containing a starter template. See [project structure](/project-structure) for how files are organized.
@@ -37,13 +37,13 @@ Create a `.tp` file under `prompts/` describing your template's schema, instruct
 ## 4. Generate code
 
 ```bash
-npx @typeprompt/cli gen
+bunx @typeprompt/cli gen
 ```
 
 Pass `--watch` to regenerate automatically as you edit your templates:
 
 ```bash
-npx @typeprompt/cli gen --watch
+bunx @typeprompt/cli gen --watch
 ```
 
 The generated code exposes a `prompts` object with one typed `render` method per template. Render it with typed input, send the result to your LLM, then parse the response back into a typed object — see the guide for your language for the exact API.

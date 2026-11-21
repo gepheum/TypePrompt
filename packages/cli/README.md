@@ -7,11 +7,11 @@ CLI for [TypePrompt](https://typeprompt.dev) — end-to-end type safety for LLM 
 ## Usage
 
 ```bash
-npx @typeprompt/cli init                     # Initialize typeprompt.yaml and prompts/
-npx @typeprompt/cli gen                      # Compile templates and generate native code (--watch)
-npx @typeprompt/cli format                   # Format .tp files (--ci to check only)
-npx @typeprompt/cli run prompts/Foo.play.tp  # Run playground inference samples
-npx @typeprompt/cli patch -b <base> -o <dir> # Create a template-override patch project
+bunx @typeprompt/cli init                     # Initialize typeprompt.yaml and prompts/
+bunx @typeprompt/cli gen                      # Compile templates and generate native code (--watch)
+bunx @typeprompt/cli format                   # Format .tp files (--ci to check only)
+bunx @typeprompt/cli run prompts/Foo.play.tp  # Run playground inference samples
+bunx @typeprompt/cli patch -b <base> -o <dir> # Create a template-override patch project
 ```
 
 See the [Quick start guide](https://typeprompt.dev/quick-start) and [CLI documentation](https://typeprompt.dev/cli) for details.

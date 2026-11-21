@@ -27,7 +27,7 @@ gen:
 Generate the C++ code:
 
 ```bash
-npx @typeprompt/cli gen
+bunx @typeprompt/cli gen
 ```
 
 ---

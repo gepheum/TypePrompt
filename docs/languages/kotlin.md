@@ -36,7 +36,7 @@ gen:
 Generate the Kotlin code:
 
 ```bash
-npx @typeprompt/cli gen
+bunx @typeprompt/cli gen
 ```
 
 ---
