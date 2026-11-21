@@ -257,3 +257,18 @@ span.lang {
 .VPHome {
   margin-bottom: 48px !important;
 }
+
+/* Keep the appearance switch and social icons visible down to the mobile
+   hamburger breakpoint (768px) instead of collapsing them into the ••• menu
+   below 1280px. */
+@media (min-width: 768px) {
+  .VPNavBarAppearance,
+  .VPNavBarSocialLinks {
+    display: flex !important;
+    align-items: center;
+  }
+
+  .VPNavBarExtra {
+    display: none !important;
+  }
+}
