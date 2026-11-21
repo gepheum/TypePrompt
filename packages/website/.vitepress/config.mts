@@ -267,6 +267,7 @@ export default defineConfig({
 
     socialLinks: [
       { icon: "github", link: "https://github.com/gepheum/typeprompt" },
+      { icon: "x", link: "https://x.com/TypePromptDev" },
     ],
 
     footer: {
