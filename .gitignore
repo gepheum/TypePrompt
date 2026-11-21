@@ -66,6 +66,7 @@ tests/swift/Sources/TypePromptE2E/Gen/
 tests/typescript/src/gen
 
 TODO
+README.dev
 node_modules
 /playground
 .gradle/
