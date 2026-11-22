@@ -39,7 +39,22 @@
 }
 
 .VPHero .tagline {
-  max-width: 640px;
+  max-width: 600px;
+  font-size: 17px !important;
+  line-height: 1.55 !important;
+  font-weight: 400 !important;
+}
+
+@media (min-width: 640px) {
+  .VPHero .tagline {
+    font-size: 18px !important;
+  }
+}
+
+@media (min-width: 960px) {
+  .VPHero .tagline {
+    font-size: 19px !important;
+  }
 }
 
 /*
@@ -48,6 +63,10 @@
  * vertically centered against the hero text.
  */
 @media (min-width: 960px) {
+  .VPHero {
+    padding-bottom: 48px !important;
+  }
+
   .VPHero .image-container {
     transform: translate(-32px, 0) !important;
   }
@@ -62,6 +81,10 @@
   .VPHero .image {
     order: 2;
     margin: 1.5rem 0 0 !important;
+  }
+
+  .VPHero .image-container {
+    height: auto !important;
   }
 }
 

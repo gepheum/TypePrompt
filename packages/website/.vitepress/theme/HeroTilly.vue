@@ -22,28 +22,28 @@
 
 .tilly-image {
   width: auto;
-  height: 192px;
+  height: 180px;
   max-width: 100%;
   object-fit: contain;
 }
 
 @media (min-width: 640px) {
   .tilly-image {
-    height: 256px;
+    height: 220px;
   }
 }
 
 @media (min-width: 960px) {
   .tilly-image {
-    height: 320px;
+    height: 240px;
   }
 }
 
 .tilly-legend {
-  margin-top: 14px;
-  max-width: 320px;
+  margin-top: 8px;
+  max-width: 300px;
   font-size: 12.5px;
-  line-height: 1.5;
+  line-height: 1.45;
   color: var(--vp-c-text-2);
   text-align: center;
   font-style: italic;
