@@ -1,7 +1,7 @@
 {
   "name": "@typeprompt/cli",
   "version": "0.9.0",
-  "description": "End-to-end type safety for LLM prompts across 8 programming languages",
+  "description": "A compiler for LLM prompts across 8 programming languages",
   "homepage": "https://typeprompt.dev",
   "repository": {
     "type": "git",

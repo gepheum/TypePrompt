@@ -1,12 +1,12 @@
 ---
 layout: home
 title: TypePrompt
-titleTemplate: End-to-end type safety for LLM prompts
+titleTemplate: A compiler for LLM prompts
 
 hero:
   name: TypePrompt
-  text: End-to-end type safety for LLM prompts
-  tagline: Write prompt templates with schemas and few-shot examples in dedicated files. TypePrompt compiles them into a <span class="nowrap">type-safe</span> API that works with any LLM SDK.
+  text: A compiler for LLM prompts
+  tagline: Write prompt instructions, schemas, tools, and few-shot examples in dedicated files. TypePrompt validates them at build time and compiles them into a <span class="nowrap">type-safe</span> API for 8 languages — ready for any LLM SDK.
   image:
     src: /tilly.svg
     alt: Tilly

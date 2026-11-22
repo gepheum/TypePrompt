@@ -150,7 +150,7 @@ function generateLlmsFiles(siteConfig: SiteConfig): void {
   const indexLines: string[] = [
     "# TypePrompt",
     "",
-    "> End-to-end type safety for LLM prompts. Write prompt templates with schemas, tools, and few-shot examples in dedicated `.tp` files and compile them into a type-safe API for TypeScript, Python, Kotlin, Rust, C++, Swift, Dart, and C#.",
+    "> A compiler for LLM prompts. Write prompt instructions, schemas, tools, and few-shot examples in dedicated `.tp` files and compile them into a type-safe API for TypeScript, Python, Kotlin, Rust, C++, Swift, Dart, and C#.",
     "",
     `Full documentation in a single file: ${SITE_URL}/llms-full.txt`,
   ];
@@ -200,7 +200,7 @@ function generateLlmsFiles(siteConfig: SiteConfig): void {
 export default defineConfig({
   srcDir: "../../docs",
   title: "TypePrompt",
-  description: "End-to-end type safety for LLM prompts.",
+  description: "A compiler for LLM prompts.",
   lang: "en-US",
   cleanUrls: true,
   lastUpdated: true,
@@ -232,7 +232,7 @@ export default defineConfig({
       "meta",
       {
         property: "og:description",
-        content: "End-to-end type safety for LLM prompts.",
+        content: "A compiler for LLM prompts.",
       },
     ],
     ["meta", { property: "og:url", content: "https://typeprompt.dev/" }],
