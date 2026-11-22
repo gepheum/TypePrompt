@@ -2,7 +2,7 @@
   <figure class="tilly-wrapper">
     <img src="/tilly.svg" alt="Tilly" class="tilly-image" />
     <figcaption class="tilly-legend">
-      Tilly is on a mission to stop prompts from living in <span class="nowrap">f-strings</span>. He doesn't care what anyone thinks. He will not rest until it's done.
+      Tilly wears sunglasses indoors. Don't ask why. Just stop putting prompts in string literals.
     </figcaption>
   </figure>
 </template>
