@@ -295,3 +295,7 @@ span.lang {
     display: none !important;
   }
 }
+
+.VPFooter .message {
+  margin-bottom: 6px;
+}
