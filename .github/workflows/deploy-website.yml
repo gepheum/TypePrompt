@@ -30,8 +30,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build @typeprompt/core
-        run: npm run build --workspace=@typeprompt/core
+      - name: Build @typeprompt/core and @typeprompt/codemirror
+        run: |
+          npm run build --workspace=@typeprompt/core
+          npm run build --workspace=@typeprompt/codemirror
 
       - name: Build website
         run: npm run build --workspace=@typeprompt/website

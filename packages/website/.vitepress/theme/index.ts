@@ -7,6 +7,7 @@ import HeroQuickstart from "./HeroQuickstart.vue";
 import HeroTilly from "./HeroTilly.vue";
 import HomeClosingCta from "./HomeClosingCta.vue";
 import HomeFeatures from "./HomeFeatures.vue";
+import HomeInteractiveExamples from "./HomeInteractiveExamples.vue";
 import VSCodeShowcase from "./VSCodeShowcase.vue";
 import "./custom.css";
 
@@ -22,6 +23,7 @@ export default {
   enhanceApp({ app }: EnhanceAppContext) {
     app.component("BlogIndex", BlogIndex);
     app.component("HomeFeatures", HomeFeatures);
+    app.component("HomeInteractiveExamples", HomeInteractiveExamples);
     app.component("VSCodeShowcase", VSCodeShowcase);
     app.component("HomeClosingCta", HomeClosingCta);
   },
