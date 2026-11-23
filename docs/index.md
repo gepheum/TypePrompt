@@ -6,7 +6,7 @@ titleTemplate: LLM prompts that fail at build time
 hero:
   name: TypePrompt
   text: LLM prompts that fail at build time
-  tagline: Write prompt instructions, schemas, tools, and <span class="nowrap">few-shot</span> examples in dedicated files. TypePrompt compiles them into a <span class="nowrap">type-safe</span> API across 8 languages. Works with any LLM SDK.
+  tagline: Write prompt templates in dedicated files. TypePrompt validates and compiles them into a <span class="nowrap">type-safe</span> API across 8 languages. Works with any LLM SDK.
   image:
     src: /tilly.svg
     alt: Tilly
