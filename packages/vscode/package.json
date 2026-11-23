@@ -2,7 +2,7 @@
   "name": "typeprompt-vscode",
   "displayName": "TypePrompt",
   "description": "VS Code support for TypePrompt templates",
-  "version": "0.8.6",
+  "version": "0.8.7",
   "publisher": "gepheum",
   "license": "MIT",
   "icon": "icon.png",
