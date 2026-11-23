@@ -6,7 +6,7 @@ titleTemplate: A compiler for LLM prompts
 hero:
   name: TypePrompt
   text: A compiler for LLM prompts
-  tagline: Write prompt instructions, schemas, tools, and few-shot examples in dedicated files. TypePrompt validates them at build time and compiles them into a <span class="nowrap">type-safe</span> API for 8 languages — ready for any LLM SDK.
+  tagline: Write prompt instructions, schemas, tools, and <span class="nowrap">few-shot</span> examples in dedicated files. TypePrompt validates them at build time and compiles them into a <span class="nowrap">type-safe</span> API for 8 languages — ready for any LLM SDK.
   image:
     src: /tilly.svg
     alt: Tilly

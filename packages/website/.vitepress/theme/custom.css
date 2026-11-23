@@ -299,3 +299,7 @@ span.lang {
 .VPFooter .message {
   margin-bottom: 6px;
 }
+
+.nowrap {
+  white-space: nowrap;
+}
