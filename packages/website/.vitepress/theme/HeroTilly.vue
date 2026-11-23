@@ -29,20 +29,20 @@
 
 @media (min-width: 640px) {
   .tilly-image {
-    height: 220px;
+    height: 240px;
   }
 }
 
 @media (min-width: 960px) {
   .tilly-image {
-    height: 240px;
+    height: 285px;
   }
 }
 
 .tilly-legend {
-  margin-top: 8px;
-  max-width: 300px;
-  font-size: 12.5px;
+  margin-top: 10px;
+  max-width: 320px;
+  font-size: 13px;
   line-height: 1.45;
   color: var(--vp-c-text-2);
   text-align: center;

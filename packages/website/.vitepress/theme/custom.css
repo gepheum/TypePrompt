@@ -21,31 +21,36 @@
 
 /* Tighter, more confident hero — this is a developer tool, not a brochure. */
 .VPHero .text {
-  max-width: 640px !important;
+  max-width: 680px !important;
   letter-spacing: -0.02em !important;
 }
 
 @media (min-width: 640px) {
   .VPHero .text {
-    font-size: 33px !important;
-    line-height: 42px !important;
+    font-size: 35px !important;
+    line-height: 44px !important;
   }
 }
 
 @media (min-width: 960px) {
   .VPHero.has-image .main {
-    max-width: 640px !important;
+    max-width: 680px !important;
+  }
+
+  .VPHero .name {
+    font-size: 62px !important;
+    line-height: 70px !important;
   }
 
   .VPHero .text {
-    font-size: 37px !important;
-    line-height: 46px !important;
+    font-size: 40px !important;
+    line-height: 48px !important;
     white-space: nowrap !important;
   }
 }
 
 .VPHero .tagline {
-  max-width: 600px;
+  max-width: 620px;
   font-size: 17px !important;
   line-height: 1.55 !important;
   font-weight: 400 !important;
@@ -53,13 +58,13 @@
 
 @media (min-width: 640px) {
   .VPHero .tagline {
-    font-size: 18px !important;
+    font-size: 18.5px !important;
   }
 }
 
 @media (min-width: 960px) {
   .VPHero .tagline {
-    font-size: 19px !important;
+    font-size: 20px !important;
   }
 }
 
