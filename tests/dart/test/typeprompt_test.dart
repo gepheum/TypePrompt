@@ -764,7 +764,7 @@ void main() {
       expect(prompt.userMessage, contains("Topic: AI Safety"));
       expect(prompt.userMessage, contains("interface Output {"));
       expect(prompt.userMessage, contains("title: string"));
-      expect(prompt.userMessage, contains("score: number"));
+      expect(prompt.userMessage, contains("score?: number"));
     });
   });
 

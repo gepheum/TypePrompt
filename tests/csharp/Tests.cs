@@ -979,7 +979,7 @@ public class TestE01_InsertOutputSchema
         Assert.Contains("Topic: AI Safety", _prompt.UserMessage);
         Assert.Contains("interface Output {", _prompt.UserMessage);
         Assert.Contains("title: string", _prompt.UserMessage);
-        Assert.Contains("score: number", _prompt.UserMessage);
+        Assert.Contains("score?: number", _prompt.UserMessage);
     }
 }
 

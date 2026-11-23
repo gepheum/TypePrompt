@@ -734,7 +734,7 @@ mod tests {
     assert!(prompt.user_message.contains("Topic: AI Safety"));
     assert!(prompt.user_message.contains("interface Output {"));
     assert!(prompt.user_message.contains("title: string"));
-    assert!(prompt.user_message.contains("score: number"));
+    assert!(prompt.user_message.contains("score?: number"));
   }
 
   // ─── E01 Spec Serialization ─────────────────────────────────────────────────

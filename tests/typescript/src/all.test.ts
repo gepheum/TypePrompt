@@ -889,7 +889,7 @@ describe("e01 / InsertOutputSchema", () => {
     expect(prompt.userMessage).toMatch(/Topic:\s*AI Safety/);
     expect(prompt.userMessage).toMatch(/interface Output {/);
     expect(prompt.userMessage).toMatch(/title: string/);
-    expect(prompt.userMessage).toMatch(/score: number/);
+    expect(prompt.userMessage).toMatch(/score\?: number/);
   });
 });
 

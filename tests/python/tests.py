@@ -147,7 +147,7 @@ class TestInsertOutputSchema:
         assert "Topic: AI Safety" in self.prompt.user_message
         assert "interface Output {" in self.prompt.user_message
         assert "title: string" in self.prompt.user_message
-        assert "score: number" in self.prompt.user_message
+        assert "score?: number" in self.prompt.user_message
 
 
 # ─── 01 Basics: text output, <enclosed>, examples ────────────────────────────

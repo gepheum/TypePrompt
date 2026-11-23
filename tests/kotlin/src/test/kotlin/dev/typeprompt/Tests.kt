@@ -947,7 +947,7 @@ class TestE01_InsertOutputSchema {
         assertTrue(prompt.userMessage.contains("Topic: AI Safety"))
         assertTrue(prompt.userMessage.contains("interface Output {"))
         assertTrue(prompt.userMessage.contains("title: string"))
-        assertTrue(prompt.userMessage.contains("score: number"))
+        assertTrue(prompt.userMessage.contains("score?: number"))
     }
 }
 

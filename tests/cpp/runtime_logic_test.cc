@@ -3979,7 +3979,7 @@ void TestE01_InsertOutputSchema() {
   ASSERT_TRUE(prompt.user_message.find("Topic: AI Safety") != std::string::npos);
   ASSERT_TRUE(prompt.user_message.find("interface Output {") != std::string::npos);
   ASSERT_TRUE(prompt.user_message.find("title: string") != std::string::npos);
-  ASSERT_TRUE(prompt.user_message.find("score: number") != std::string::npos);
+  ASSERT_TRUE(prompt.user_message.find("score?: number") != std::string::npos);
 }
 
 void TestCrossCutting_ParseResponse() {
