@@ -653,6 +653,10 @@ Console.WriteLine(result.HumanAction);
 
 If your application code and your templates drift apart, your compiler or type checker catches it — not at runtime, in production, after the model replies.
 
+## Features
+
+<HomeFeatures />
+
 ## Test your templates where you write them
 
 Run sample inputs against a real model and see the output without leaving your IDE.

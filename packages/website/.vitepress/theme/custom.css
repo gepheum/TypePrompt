@@ -309,3 +309,12 @@ span.lang {
 .nowrap {
   white-space: nowrap;
 }
+
+/* Hide the default top-of-page features slot so <HomeFeatures /> can render
+   the feature cards below the code examples instead. */
+.VPHome > .VPHomeFeatures {
+  display: none !important;
+}
+.VPHome .VPHomeHero + .VPHomeFeatures + .vp-doc h2:first-of-type {
+  margin-top: 8px !important;
+}
