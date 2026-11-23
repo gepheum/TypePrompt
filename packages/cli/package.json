@@ -1,6 +1,6 @@
 {
   "name": "@typeprompt/cli",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "description": "A compiler for LLM prompts across 8 programming languages",
   "homepage": "https://typeprompt.dev",
   "repository": {
@@ -38,9 +38,9 @@
   },
   "dependencies": {
     "@toon-format/toon": "^4.1.0",
-    "@typeprompt/core": "0.9.0",
-    "@typeprompt/formatter": "0.9.0",
-    "@typeprompt/inference-runner": "0.9.0",
+    "@typeprompt/core": "0.9.1",
+    "@typeprompt/formatter": "0.9.1",
+    "@typeprompt/inference-runner": "0.9.1",
     "@types/glob-parent": "^5.1.3",
     "glob": "^14.0.6",
     "glob-parent": "^6.0.2",

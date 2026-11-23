@@ -1,6 +1,6 @@
 {
   "name": "@typeprompt/core",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "description": "Core compiler, schema validator, and LSP engine for TypePrompt",
   "homepage": "https://typeprompt.dev",
   "repository": {
