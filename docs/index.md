@@ -14,7 +14,7 @@ hero:
 features:
   - icon: 🗂
     title: Self-contained prompt files
-    details: Your prompt templates live in dedicated files that bundle prompt instructions, typed schemas, tools, and few-shot examples. TypePrompt compiles them into a native API.
+    details: Your prompt templates live in dedicated files that bundle prompt instructions, schemas, tools, and few-shot examples. TypePrompt compiles them into a native API.
   - icon: 🔌
     title: Works with your stack
     details: Compiles to 8 programming languages with zero framework lock-in. The generated API drops cleanly into whatever LLM SDK you already use.
@@ -34,7 +34,7 @@ features:
 
 ## See it in action
 
-Prompt templates are plain XML files that bring together prompt instructions, typed schemas, tools, and few-shot examples into a single source of truth.
+Prompt templates are plain XML files that bring together prompt instructions, schemas, tools, and few-shot examples into a single source of truth.
 
 <HomeInteractiveExamples />
 

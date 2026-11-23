@@ -15,7 +15,7 @@ Write prompt instructions, schemas, tools, and few-shot examples in dedicated `.
 
 ## See it in action
 
-Prompt templates are plain XML files that bring together prompt instructions, typed schemas, tools, and few-shot examples into a single source of truth:
+Prompt templates are plain XML files that bring together prompt instructions, schemas, tools, and few-shot examples into a single source of truth:
 
 ```xml
 <!-- DecodeCatMood.tp -->

@@ -25,7 +25,7 @@ import QuickstartPill from './QuickstartPill.vue'
 <style scoped>
 .closing-cta {
   margin-top: 2rem;
-  padding: 3rem 1.5rem 0;
+  padding: 2rem 1.5rem 0;
   border-top: 1px solid var(--vp-c-divider);
   text-align: center;
 }

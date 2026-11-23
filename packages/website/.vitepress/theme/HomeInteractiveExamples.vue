@@ -785,8 +785,13 @@ onBeforeUnmount(() => {
 .tp-cm-wrapper {
   position: relative;
   background-color: var(--vp-code-block-bg) !important;
-  border-radius: 0 0 10px 10px !important;
   overflow: hidden;
+}
+
+@media (min-width: 640px) {
+  .tp-cm-wrapper {
+    border-radius: 0 0 10px 10px !important;
+  }
 }
 
 .tp-ssr-fallback {
@@ -815,7 +820,11 @@ onBeforeUnmount(() => {
 .tp-cm-mount :deep(.cm-gutters) {
   background-color: transparent !important;
   border-right: none !important;
-  padding-left: 6px;
+  padding-left: 2px;
+}
+
+.tp-cm-mount :deep(.cm-gutter-lint) {
+  width: 16px;
 }
 
 .tp-cm-mount :deep(.cm-scroller) {
@@ -834,7 +843,7 @@ onBeforeUnmount(() => {
 }
 
 .tp-cm-mount :deep(.cm-line) {
-  padding: 0 24px 0 8px;
+  padding: 0 24px 0 6px;
   border-radius: 3px;
   transition: background-color 0.1s ease;
 }
