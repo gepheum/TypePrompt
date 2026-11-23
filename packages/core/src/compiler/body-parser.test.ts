@@ -648,6 +648,290 @@ describe("parseBody - indentation tracking for inserts", () => {
       errors: [],
     });
   });
+
+  it("tracks column indent when <insert val='...'/> starts an indented line", () => {
+    const input = [
+      "<user>",
+      "      foo",
+      '        <insert val="input" format="yaml" />',
+      "  </user>",
+    ].join("\n");
+
+    expect(testParseBody(input)).toMatch({
+      body: [
+        { kind: "text", text: "foo\n  " },
+        {
+          kind: "insert-val",
+          val: { kind: "input" },
+          format: { text: "yaml" },
+          indent: "  ",
+        },
+      ],
+      errors: [],
+    });
+  });
+
+  it("tracks column indent when <insert schema='Output'/> starts an indented line", () => {
+    const input = [
+      "<system>",
+      "  Return JSON matching:",
+      '    <insert schema="Output" format="typescript" />',
+      "</system>",
+    ].join("\n");
+
+    expect(testParseBody(input)).toMatch({
+      body: [
+        { kind: "text", text: "Return JSON matching:\n  " },
+        {
+          kind: "insert-schema",
+          schema: { text: "Output" },
+          indent: "  ",
+        },
+      ],
+      errors: [],
+    });
+  });
+
+  it("tracks column indent when <insert snippet='...'/> starts an indented line", () => {
+    const input = [
+      "<system>",
+      "  Instructions:",
+      '      <insert snippet="mySnippet" />',
+      "</system>",
+    ].join("\n");
+
+    expect(testParseBody(input)).toMatch({
+      body: [
+        { kind: "text", text: "Instructions:\n    " },
+        {
+          kind: "insert-snippet",
+          snippet: { text: "mySnippet" },
+          indent: "    ",
+        },
+      ],
+      errors: [],
+    });
+  });
+
+  it("assigns empty indent when <insert> starts a line at exactly baseIndent", () => {
+    const input = [
+      "<user>",
+      "      foo",
+      '      <insert val="input" format="yaml" />',
+      "  </user>",
+    ].join("\n");
+
+    expect(testParseBody(input)).toMatch({
+      body: [
+        { kind: "text", text: "foo\n" },
+        {
+          kind: "insert-val",
+          val: { kind: "input" },
+          format: { text: "yaml" },
+          indent: "",
+        },
+      ],
+      errors: [],
+    });
+  });
+
+  it("tracks column indent when <insert> is nested inside a multi-line <enclosed> block", () => {
+    const input = [
+      "<user>",
+      '  <enclosed tag="Document">',
+      '    <insert val="input.doc" />',
+      "  </enclosed>",
+      "</user>",
+    ].join("\n");
+
+    expect(testParseBody(input)).toMatch({
+      body: [
+        { kind: "text", text: "<Document>" },
+        { kind: "text", text: "\n  " },
+        {
+          kind: "insert-val",
+          val: {
+            kind: "property",
+            property: { text: "doc" },
+            left: { kind: "input" },
+          },
+          indent: "  ",
+        },
+        { kind: "text", text: "\n" },
+        { kind: "text", text: "</Document>" },
+      ],
+      errors: [],
+    });
+  });
+
+  it("preserves extra indentation before <c> and <enclosed> on their own lines", () => {
+    const parsed = testParseBody(
+      [
+        "<user>",
+        "    Header:",
+        "      <c>myId</c>",
+        '        <enclosed tag="item">val</enclosed>',
+        "</user>",
+      ].join("\n"),
+    );
+
+    expect(parsed).toMatch({
+      body: [
+        { kind: "text", text: "Header:\n  " },
+        {
+          kind: "c-tag",
+          text: "myId",
+        },
+        { kind: "text", text: "\n    " },
+        { kind: "text", text: "<item>" },
+        { kind: "text", text: "val" },
+        { kind: "text", text: "</item>" },
+      ],
+      errors: [],
+    });
+  });
+
+  it("tracks column indent when <insert val='...'/> starts an indented line", () => {
+    const input = [
+      "<user>",
+      "      foo",
+      '        <insert val="input" format="yaml" />',
+      "  </user>",
+    ].join("\n");
+
+    expect(testParseBody(input)).toMatch({
+      body: [
+        { kind: "text", text: "foo\n  " },
+        {
+          kind: "insert-val",
+          val: { kind: "input" },
+          format: { text: "yaml" },
+          indent: "  ",
+        },
+      ],
+      errors: [],
+    });
+  });
+
+  it("tracks column indent when <insert schema='Output'/> starts an indented line", () => {
+    const input = [
+      "<system>",
+      "  Return JSON matching:",
+      '    <insert schema="Output" format="typescript" />',
+      "</system>",
+    ].join("\n");
+
+    expect(testParseBody(input)).toMatch({
+      body: [
+        { kind: "text", text: "Return JSON matching:\n  " },
+        {
+          kind: "insert-schema",
+          schema: { text: "Output" },
+          indent: "  ",
+        },
+      ],
+      errors: [],
+    });
+  });
+
+  it("tracks column indent when <insert snippet='...'/> starts an indented line", () => {
+    const input = [
+      "<system>",
+      "  Instructions:",
+      '      <insert snippet="mySnippet" />',
+      "</system>",
+    ].join("\n");
+
+    expect(testParseBody(input)).toMatch({
+      body: [
+        { kind: "text", text: "Instructions:\n    " },
+        {
+          kind: "insert-snippet",
+          snippet: { text: "mySnippet" },
+          indent: "    ",
+        },
+      ],
+      errors: [],
+    });
+  });
+
+  it("assigns empty indent when <insert> starts a line at exactly baseIndent", () => {
+    const input = [
+      "<user>",
+      "      foo",
+      '      <insert val="input" format="yaml" />',
+      "  </user>",
+    ].join("\n");
+
+    expect(testParseBody(input)).toMatch({
+      body: [
+        { kind: "text", text: "foo\n" },
+        {
+          kind: "insert-val",
+          val: { kind: "input" },
+          format: { text: "yaml" },
+          indent: "",
+        },
+      ],
+      errors: [],
+    });
+  });
+
+  it("tracks column indent when <insert> is nested inside a multi-line <enclosed> block", () => {
+    const input = [
+      "<user>",
+      '  <enclosed tag="Document">',
+      '    <insert val="input.doc" />',
+      "  </enclosed>",
+      "</user>",
+    ].join("\n");
+
+    expect(testParseBody(input)).toMatch({
+      body: [
+        { kind: "text", text: "<Document>" },
+        { kind: "text", text: "\n  " },
+        {
+          kind: "insert-val",
+          val: {
+            kind: "property",
+            property: { text: "doc" },
+            left: { kind: "input" },
+          },
+          indent: "  ",
+        },
+        { kind: "text", text: "\n" },
+        { kind: "text", text: "</Document>" },
+      ],
+      errors: [],
+    });
+  });
+
+  it("preserves extra indentation before <c> and <enclosed> on their own lines", () => {
+    const parsed = testParseBody(
+      [
+        "<user>",
+        "    Header:",
+        "      <c>myId</c>",
+        '        <enclosed tag="item">val</enclosed>',
+        "</user>",
+      ].join("\n"),
+    );
+
+    expect(parsed).toMatch({
+      body: [
+        { kind: "text", text: "Header:\n  " },
+        {
+          kind: "c-tag",
+          text: "myId",
+        },
+        { kind: "text", text: "\n    " },
+        { kind: "text", text: "<item>" },
+        { kind: "text", text: "val" },
+        { kind: "text", text: "</item>" },
+      ],
+      errors: [],
+    });
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -859,6 +1143,214 @@ describe("parseBody - unexpected child elements", () => {
       ],
     });
   });
+
+  it("reports an indentation error when an <insert val='...'/> line has less indentation than base indent", () => {
+    const input = [
+      "  <user>",
+      "      foo",
+      '    <insert val="input" format="yaml" />',
+      "  </user>",
+    ].join("\n");
+
+    expect(testParseBody(input)).toMatch({
+      errors: [
+        {
+          message: "Indentation error; expected: '      '",
+        },
+      ],
+    });
+  });
+
+  it("reports an indentation error when an <insert snippet='...'/> line has less indentation than base indent", () => {
+    const input = [
+      "<system>",
+      "      foo",
+      '    <insert snippet="mySnippet" />',
+      "</system>",
+    ].join("\n");
+
+    expect(testParseBody(input)).toMatch({
+      errors: [
+        {
+          message: "Indentation error; expected: '      '",
+        },
+      ],
+    });
+  });
+
+  it("reports an indentation error when an <insert schema='Output'/> line has less indentation than base indent", () => {
+    const input = [
+      "<system>",
+      "      foo",
+      '    <insert schema="Output" format="typescript" />',
+      "</system>",
+    ].join("\n");
+
+    expect(testParseBody(input)).toMatch({
+      errors: [
+        {
+          message: "Indentation error; expected: '      '",
+        },
+      ],
+    });
+  });
+
+  it("reports an indentation error when a <c> line has less indentation than base indent", () => {
+    const input = ["<user>", "      foo", "    <c>bar</c>", "</user>"].join(
+      "\n",
+    );
+
+    expect(testParseBody(input)).toMatch({
+      errors: [
+        {
+          message: "Indentation error; expected: '      '",
+        },
+      ],
+    });
+  });
+
+  it("reports an indentation error when an <enclosed> opening or closing tag line has less indentation than base indent", () => {
+    const underIndentedOpen = [
+      "<user>",
+      "      foo",
+      '    <enclosed tag="doc">',
+      "        bar",
+      "      </enclosed>",
+      "</user>",
+    ].join("\n");
+
+    expect(testParseBody(underIndentedOpen)).toMatch({
+      errors: [
+        {
+          message: "Indentation error; expected: '      '",
+        },
+      ],
+    });
+
+    const underIndentedClose = [
+      "<user>",
+      "      foo",
+      '      <enclosed tag="doc">',
+      "        bar",
+      "    </enclosed>",
+      "</user>",
+    ].join("\n");
+
+    expect(testParseBody(underIndentedClose)).toMatch({
+      errors: [
+        {
+          message: "Indentation error; expected: '      '",
+        },
+      ],
+    });
+  });
+
+  it("reports an indentation error when a line inside <enclosed> has less indentation than base indent", () => {
+    const input = [
+      "<user>",
+      '    <enclosed tag="doc">',
+      '  <insert val="input" />',
+      "    </enclosed>",
+      "</user>",
+    ].join("\n");
+
+    expect(testParseBody(input)).toMatch({
+      errors: [
+        {
+          message: "Indentation error; expected: '    '",
+        },
+      ],
+    });
+  });
+
+  it("establishes baseIndent from a first line starting with <insert> and rejects under-indented subsequent text or <insert> lines", () => {
+    const underIndentedTextAfterInsert = [
+      "<user>",
+      '      <insert val="input" format="yaml" />',
+      "    foo",
+      "</user>",
+    ].join("\n");
+
+    expect(testParseBody(underIndentedTextAfterInsert)).toMatch({
+      errors: [
+        {
+          message: "Indentation error; expected: '      '",
+        },
+      ],
+    });
+
+    const underIndentedInsertAfterInsert = [
+      "<user>",
+      '      <insert val="input.a" />',
+      '    <insert val="input.b" />',
+      "</user>",
+    ].join("\n");
+
+    expect(testParseBody(underIndentedInsertAfterInsert)).toMatch({
+      errors: [
+        {
+          message: "Indentation error; expected: '      '",
+        },
+      ],
+    });
+  });
+
+  it("allows blank or whitespace-only lines with fewer spaces than baseIndent before an <insert>, while still checking the <insert> line itself", () => {
+    const validWithBlankLines = [
+      "<user>",
+      "      foo",
+      "",
+      "  ",
+      '      <insert val="input" format="yaml" />',
+      "  </user>",
+    ].join("\n");
+
+    expect(testParseBody(validWithBlankLines)).toMatch({
+      body: [
+        { kind: "text", text: "foo\n\n\n" },
+        {
+          kind: "insert-val",
+          val: { kind: "input" },
+          format: { text: "yaml" },
+          indent: "",
+        },
+      ],
+      errors: [],
+    });
+
+    const invalidAfterBlankLine = [
+      "<user>",
+      "      foo",
+      "  ",
+      '    <insert val="input" format="yaml" />',
+      "  </user>",
+    ].join("\n");
+
+    expect(testParseBody(invalidAfterBlankLine)).toMatch({
+      errors: [
+        {
+          message: "Indentation error; expected: '      '",
+        },
+      ],
+    });
+  });
+
+  it("still reports an indentation error when a line starts with an invalid child element indented less than baseIndent", () => {
+    const input = ["<user>", "      foo", "    <insert />", "</user>"].join(
+      "\n",
+    );
+
+    expect(testParseBody(input)).toMatch({
+      errors: [
+        {
+          message: "Missing required attribute 'val'",
+        },
+        {
+          message: "Indentation error; expected: '      '",
+        },
+      ],
+    });
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -889,6 +1381,214 @@ describe("parseBody - indentation errors", () => {
       errors: [
         {
           message: "Indentation error; expected: '\\t'",
+        },
+      ],
+    });
+  });
+
+  it("reports an indentation error when an <insert val='...'/> line has less indentation than base indent", () => {
+    const input = [
+      "  <user>",
+      "      foo",
+      '    <insert val="input" format="yaml" />',
+      "  </user>",
+    ].join("\n");
+
+    expect(testParseBody(input)).toMatch({
+      errors: [
+        {
+          message: "Indentation error; expected: '      '",
+        },
+      ],
+    });
+  });
+
+  it("reports an indentation error when an <insert snippet='...'/> line has less indentation than base indent", () => {
+    const input = [
+      "<system>",
+      "      foo",
+      '    <insert snippet="mySnippet" />',
+      "</system>",
+    ].join("\n");
+
+    expect(testParseBody(input)).toMatch({
+      errors: [
+        {
+          message: "Indentation error; expected: '      '",
+        },
+      ],
+    });
+  });
+
+  it("reports an indentation error when an <insert schema='Output'/> line has less indentation than base indent", () => {
+    const input = [
+      "<system>",
+      "      foo",
+      '    <insert schema="Output" format="typescript" />',
+      "</system>",
+    ].join("\n");
+
+    expect(testParseBody(input)).toMatch({
+      errors: [
+        {
+          message: "Indentation error; expected: '      '",
+        },
+      ],
+    });
+  });
+
+  it("reports an indentation error when a <c> line has less indentation than base indent", () => {
+    const input = ["<user>", "      foo", "    <c>bar</c>", "</user>"].join(
+      "\n",
+    );
+
+    expect(testParseBody(input)).toMatch({
+      errors: [
+        {
+          message: "Indentation error; expected: '      '",
+        },
+      ],
+    });
+  });
+
+  it("reports an indentation error when an <enclosed> opening or closing tag line has less indentation than base indent", () => {
+    const underIndentedOpen = [
+      "<user>",
+      "      foo",
+      '    <enclosed tag="doc">',
+      "        bar",
+      "      </enclosed>",
+      "</user>",
+    ].join("\n");
+
+    expect(testParseBody(underIndentedOpen)).toMatch({
+      errors: [
+        {
+          message: "Indentation error; expected: '      '",
+        },
+      ],
+    });
+
+    const underIndentedClose = [
+      "<user>",
+      "      foo",
+      '      <enclosed tag="doc">',
+      "        bar",
+      "    </enclosed>",
+      "</user>",
+    ].join("\n");
+
+    expect(testParseBody(underIndentedClose)).toMatch({
+      errors: [
+        {
+          message: "Indentation error; expected: '      '",
+        },
+      ],
+    });
+  });
+
+  it("reports an indentation error when a line inside <enclosed> has less indentation than base indent", () => {
+    const input = [
+      "<user>",
+      '    <enclosed tag="doc">',
+      '  <insert val="input" />',
+      "    </enclosed>",
+      "</user>",
+    ].join("\n");
+
+    expect(testParseBody(input)).toMatch({
+      errors: [
+        {
+          message: "Indentation error; expected: '    '",
+        },
+      ],
+    });
+  });
+
+  it("establishes baseIndent from a first line starting with <insert> and rejects under-indented subsequent text or <insert> lines", () => {
+    const underIndentedTextAfterInsert = [
+      "<user>",
+      '      <insert val="input" format="yaml" />',
+      "    foo",
+      "</user>",
+    ].join("\n");
+
+    expect(testParseBody(underIndentedTextAfterInsert)).toMatch({
+      errors: [
+        {
+          message: "Indentation error; expected: '      '",
+        },
+      ],
+    });
+
+    const underIndentedInsertAfterInsert = [
+      "<user>",
+      '      <insert val="input.a" />',
+      '    <insert val="input.b" />',
+      "</user>",
+    ].join("\n");
+
+    expect(testParseBody(underIndentedInsertAfterInsert)).toMatch({
+      errors: [
+        {
+          message: "Indentation error; expected: '      '",
+        },
+      ],
+    });
+  });
+
+  it("allows blank or whitespace-only lines with fewer spaces than baseIndent before an <insert>, while still checking the <insert> line itself", () => {
+    const validWithBlankLines = [
+      "<user>",
+      "      foo",
+      "",
+      "  ",
+      '      <insert val="input" format="yaml" />',
+      "  </user>",
+    ].join("\n");
+
+    expect(testParseBody(validWithBlankLines)).toMatch({
+      body: [
+        { kind: "text", text: "foo\n\n\n" },
+        {
+          kind: "insert-val",
+          val: { kind: "input" },
+          format: { text: "yaml" },
+          indent: "",
+        },
+      ],
+      errors: [],
+    });
+
+    const invalidAfterBlankLine = [
+      "<user>",
+      "      foo",
+      "  ",
+      '    <insert val="input" format="yaml" />',
+      "  </user>",
+    ].join("\n");
+
+    expect(testParseBody(invalidAfterBlankLine)).toMatch({
+      errors: [
+        {
+          message: "Indentation error; expected: '      '",
+        },
+      ],
+    });
+  });
+
+  it("still reports an indentation error when a line starts with an invalid child element indented less than baseIndent", () => {
+    const input = ["<user>", "      foo", "    <insert />", "</user>"].join(
+      "\n",
+    );
+
+    expect(testParseBody(input)).toMatch({
+      errors: [
+        {
+          message: "Missing required attribute 'val'",
+        },
+        {
+          message: "Indentation error; expected: '      '",
         },
       ],
     });

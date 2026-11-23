@@ -2,7 +2,8 @@
   <figure class="tilly-wrapper">
     <img src="/tilly.svg" alt="Tilly" class="tilly-image" />
     <figcaption class="tilly-legend">
-      Tilly wears sunglasses indoors. Don't ask why. Just stop putting prompts in string literals.
+      Tilly wears sunglasses indoors. Don't ask why.<br />
+      Just stop putting prompts in string literals.
     </figcaption>
   </figure>
 </template>

@@ -73,6 +73,7 @@ function parseBodyImpl<HasValContext extends boolean>(
     });
     errors.push(...attrs.errors);
     if (attrs.kind === "error") {
+      rawPieces.push({ kind: "error-placeholder" });
       return;
     }
     rawPieces.push({
@@ -88,6 +89,7 @@ function parseBodyImpl<HasValContext extends boolean>(
     });
     errors.push(...attrs.errors);
     if (attrs.kind === "error") {
+      rawPieces.push({ kind: "error-placeholder" });
       return;
     }
     rawPieces.push({
@@ -111,11 +113,13 @@ function parseBodyImpl<HasValContext extends boolean>(
     });
     errors.push(...attrs.errors);
     if (attrs.kind === "error") {
+      rawPieces.push({ kind: "error-placeholder" });
       return;
     }
     const val = parseExpression(attrs.attributes.val.value, options);
     if (val.kind === "error") {
       errors.push(...val.errors);
+      rawPieces.push({ kind: "error-placeholder" });
       return;
     }
     const format = attrs.attributes.format?.value ?? null;
@@ -146,11 +150,13 @@ function parseBodyImpl<HasValContext extends boolean>(
         const textContent = extractTextContent(child, "c-tag");
         if (textContent.kind === "error") {
           errors.push(...textContent.errors);
+          rawPieces.push({ kind: "error-placeholder" });
           return null;
         }
         const cTag = parseCTag(textContent.text);
         if (cTag.kind === "error") {
           errors.push(...cTag.errors);
+          rawPieces.push({ kind: "error-placeholder" });
         } else {
           rawPieces.push({
             kind: "c-tag",
@@ -176,6 +182,8 @@ function parseBodyImpl<HasValContext extends boolean>(
           rawPieces.push({ kind: "synthetic-text", text: `<${tagName}>` });
           visitChildren(child);
           rawPieces.push({ kind: "synthetic-text", text: `</${tagName}>` });
+        } else {
+          rawPieces.push({ kind: "error-placeholder" });
         }
         return null;
       }
@@ -190,6 +198,7 @@ function parseBodyImpl<HasValContext extends boolean>(
         return null;
       }
       case null: {
+        rawPieces.push({ kind: "error-placeholder" });
         return null;
       }
     }
@@ -212,6 +221,7 @@ type RawBodyPiece<HasValContext extends boolean, Text = MappedText> =
   | { readonly kind: "text"; readonly text: Text }
   | { readonly kind: "c-tag"; readonly text: Text; readonly cTag: CTag }
   | { readonly kind: "synthetic-text"; readonly text: string }
+  | { readonly kind: "error-placeholder" }
   | {
       readonly kind: "insert-val";
       readonly val: Expression<HasValContext>;
@@ -244,9 +254,11 @@ function dedentRawPieces<HasValContext extends boolean>(
     firstRaw?.kind === "text" ? computeBaseIndent(firstRaw.text) : "";
 
   const dedented: Array<DedentedPiece<HasValContext>> = [];
-  for (const p of rawPieces) {
+  for (let i = 0; i < rawPieces.length; i++) {
+    const p = rawPieces[i]!;
     if (p.kind === "text" || p.kind === "c-tag") {
-      let text = removeIndentAfterEol(p.text, baseIndent, errors);
+      const isLastPiece = p.kind === "c-tag" || i === rawPieces.length - 1;
+      let text = removeIndentAfterEol(p.text, baseIndent, isLastPiece, errors);
       if (p.kind === "text" && text.startsWith("\n") && dedented.length <= 0) {
         // Remove the first newline if it's the first piece.
         text = text.slice(1);
@@ -291,10 +303,12 @@ function computeBaseIndent(firstTextNode: MappedText): string {
 function removeIndentAfterEol(
   textNode: MappedText,
   baseIndent: string,
+  isLastPiece: boolean,
   errors: ErrorSink,
 ): string {
   const { text } = textNode;
   if (text.length <= 0 || baseIndent.length <= 0) return text;
+  const whiteLineRegex = isLastPiece ? /^([ \t]*)(\n|$)/ : /^([ \t]*)\n/;
   let out = "";
   let cursor = 0;
   while (true) {
@@ -307,7 +321,7 @@ function removeIndentAfterEol(
     if (cursor >= text.length) {
       break;
     }
-    const whiteLineMatch = /^([ \t]*)(\n|$)/.exec(text.slice(cursor));
+    const whiteLineMatch = whiteLineRegex.exec(text.slice(cursor));
     if (whiteLineMatch) {
       // A line with only whitespaces. Skip them.
       cursor += whiteLineMatch[1]!.length;
@@ -382,6 +396,12 @@ function toBodyPieces<HasValContext extends boolean>(
         const { text } = dedentedPiece;
         result.push({ kind: "text", text });
         updateLastLineState(text);
+        break;
+      }
+      case "error-placeholder": {
+        if (lastLineState?.allWhitespace) {
+          lastLineState = { ...lastLineState, allWhitespace: false };
+        }
         break;
       }
       case "insert-schema":
