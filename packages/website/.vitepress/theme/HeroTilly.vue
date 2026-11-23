@@ -34,8 +34,13 @@
 }
 
 @media (min-width: 960px) {
+  .tilly-wrapper {
+    justify-content: flex-end;
+    padding-bottom: 4px;
+  }
+
   .tilly-image {
-    height: 285px;
+    height: 226px;
   }
 }
 
