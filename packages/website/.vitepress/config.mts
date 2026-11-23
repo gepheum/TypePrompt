@@ -200,7 +200,7 @@ function generateLlmsFiles(siteConfig: SiteConfig): void {
 export default defineConfig({
   srcDir: "../../docs",
   title: "TypePrompt",
-  description: "A compiler for LLM prompts.",
+  description: "LLM prompts that fail at build time.",
   lang: "en-US",
   cleanUrls: true,
   lastUpdated: true,
@@ -232,7 +232,7 @@ export default defineConfig({
       "meta",
       {
         property: "og:description",
-        content: "A compiler for LLM prompts.",
+        content: "LLM prompts that fail at build time.",
       },
     ],
     ["meta", { property: "og:url", content: "https://typeprompt.dev/" }],

@@ -1,6 +1,6 @@
 # TypePrompt
 
-**A compiler for LLM prompts.**
+**LLM prompts that fail at build time.**
 
 [Website](https://typeprompt.dev) · [Docs](https://typeprompt.dev/introduction) · [Quick Start](https://typeprompt.dev/quick-start) · [Playground](https://typeprompt.dev/playground) · [GitHub](https://github.com/gepheum/typeprompt)
 

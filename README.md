@@ -3,11 +3,11 @@
 
 # TypePrompt
 
-**A compiler for LLM prompts.**
+**LLM prompts that fail at build time.**
 
 [Website](https://typeprompt.dev) · [Docs](https://typeprompt.dev/introduction) · [Quick Start](https://typeprompt.dev/quick-start) · [VS Code Extension](https://marketplace.visualstudio.com/items?itemName=gepheum.typeprompt-vscode) · [Examples](examples)
 
-Write prompt instructions, schemas, tools, and few-shot examples in dedicated `.tp` files. TypePrompt validates them at build time and compiles them into a type-safe API for your target language — with zero framework lock-in, ready to drop into whatever LLM SDK you already use.
+Write prompt instructions, schemas, tools, and few-shot examples in dedicated `.tp` files. TypePrompt compiles them into a type-safe API for your target language — with zero framework lock-in, ready to drop into whatever LLM SDK you already use.
 
 **Supported languages:** TypeScript, Python, Kotlin, Rust, C++, Swift, Dart, C#
 
