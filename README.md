@@ -112,7 +112,7 @@ If your application code and your templates drift apart, your compiler or type c
 **Tooling**
 
 - **[CLI](https://typeprompt.dev/cli)**: Code generation, watch mode, and a built-in formatter.
-- **Editor support**: [VS Code extension](https://marketplace.visualstudio.com/items?itemName=gepheum.typeprompt-vscode) and a standalone Language Server (`npx @typeprompt/language-server`).
+- **Editor support**: VS Code extension ([VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=gepheum.typeprompt-vscode) · [Open VSX](https://open-vsx.org/extension/gepheum/typeprompt-vscode)) and a standalone Language Server (`npx @typeprompt/language-server`).
 
 ---
 

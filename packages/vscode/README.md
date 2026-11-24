@@ -2,7 +2,7 @@
 
 **LLM prompts that fail at build time.**
 
-[Website](https://typeprompt.dev) · [Docs](https://typeprompt.dev/introduction) · [Quick Start](https://typeprompt.dev/quick-start) · [Playground](https://typeprompt.dev/playground) · [GitHub](https://github.com/gepheum/typeprompt)
+[Website](https://typeprompt.dev) · [Docs](https://typeprompt.dev/introduction) · [Quick Start](https://typeprompt.dev/quick-start) · [Playground](https://typeprompt.dev/playground) · [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=gepheum.typeprompt-vscode) · [Open VSX](https://open-vsx.org/extension/gepheum/typeprompt-vscode) · [GitHub](https://github.com/gepheum/typeprompt)
 
 Official VS Code extension for authoring and testing [TypePrompt](https://typeprompt.dev) templates (`.tp`).
 

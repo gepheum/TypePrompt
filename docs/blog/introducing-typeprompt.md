@@ -87,7 +87,7 @@ TypePrompt currently compiles to 8 languages: TypeScript, Python, Kotlin, Rust, 
 
 A few other things we built because we kept wanting them ourselves:
 
-- **A Playground right in VS Code (and the CLI).** You can keep sample inputs in a `.play.tp` file next to your template and run them against real models from the [VS Code extension](https://marketplace.visualstudio.com/items?itemName=gepheum.typeprompt-vscode) or `npx @typeprompt/cli run`, without copy-pasting prompts into a web console.
+- **A Playground right in VS Code (and the CLI).** You can keep sample inputs in a `.play.tp` file next to your template and run them against real models from the VS Code extension ([VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=gepheum.typeprompt-vscode), [Open VSX](https://open-vsx.org/extension/gepheum/typeprompt-vscode)) or `npx @typeprompt/cli run`, without copy-pasting prompts into a web console.
 - **Formatting and editor support.** There's a standalone Language Server (`npx @typeprompt/language-server`) with diagnostics, go-to-definition, and rename, plus `npx @typeprompt/cli format` so `.tp` files stay tidy in CI.
 - **Variants and runtime overrides.** You can keep A/B [variants](/reference#variant) under one schema, or load [template overrides](/template-overrides) at runtime when you want to iterate on wording without redeploying.
 - **An agent skill.** If you use Claude Code, Cursor, or another coding agent, `npx skills add gepheum/typeprompt` gives it the `.tp` syntax and CLI rules out of the box.

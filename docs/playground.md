@@ -54,7 +54,7 @@ Keeping them separate lets you try any model on a template (a new release, a che
 
 ## Running from VS Code
 
-Running playgrounds from the editor requires the [TypePrompt extension](https://marketplace.visualstudio.com/items?itemName=gepheum.typeprompt-vscode). Search for **TypePrompt** in the Extensions view, or run:
+Running playgrounds from the editor requires the TypePrompt extension ([VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=gepheum.typeprompt-vscode) · [Open VSX](https://open-vsx.org/extension/gepheum/typeprompt-vscode)). Search for **TypePrompt** in the Extensions view, or run:
 
 ```bash
 code --install-extension gepheum.typeprompt-vscode
